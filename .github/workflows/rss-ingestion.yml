@@ -1,0 +1,21 @@
+name: RSS Ingestion
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger secure ingestion endpoint
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
+        run: |
+          echo "Triggering RSS ingestion at $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          curl --fail --silent --show-error \
+            -H "x-ingest-secret: ${INGEST_SECRET}" \
+            -X POST "${BACKEND_URL}/api/internal/ingest"
+          echo "RSS ingestion request completed successfully."

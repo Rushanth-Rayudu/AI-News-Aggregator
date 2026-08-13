@@ -1,0 +1,222 @@
+[
+  {
+    "sourceName": "OpenAI Blog",
+    "feedUrl": "https://openai.com/blog/rss.xml",
+    "homepageUrl": "https://openai.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 15,
+    "category": "AI Companies"
+  },
+  {
+    "sourceName": "Google DeepMind Blog",
+    "feedUrl": "https://deepmind.google/blog/rss.xml",
+    "homepageUrl": "https://deepmind.google",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 15,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "Anthropic News",
+    "feedUrl": "https://www.anthropic.com/news/rss",
+    "homepageUrl": "https://www.anthropic.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": false,
+    "pollingInterval": 15,
+    "category": "AI Safety"
+  },
+  {
+    "sourceName": "Meta AI Blog",
+    "feedUrl": "https://engineering.fb.com/feed/",
+    "homepageUrl": "https://ai.meta.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 15,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "Hugging Face Blog",
+    "feedUrl": "https://huggingface.co/blog/feed.xml",
+    "homepageUrl": "https://huggingface.co",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 15,
+    "category": "Open Source AI"
+  },
+  {
+    "sourceName": "Microsoft Research Blog",
+    "feedUrl": "https://www.microsoft.com/en-us/research/feed/",
+    "homepageUrl": "https://www.microsoft.com/en-us/research",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "NVIDIA AI Blog",
+    "feedUrl": "https://blogs.nvidia.com/blog/category/deep-learning/feed/",
+    "homepageUrl": "https://blogs.nvidia.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI Chips / Hardware"
+  },
+  {
+    "sourceName": "MIT News - AI",
+    "feedUrl": "https://news.mit.edu/rss/topic/artificial-intelligence2",
+    "homepageUrl": "https://news.mit.edu",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "arXiv AI (cs.AI)",
+    "feedUrl": "https://export.arxiv.org/api/query?search_query=cat:cs.AI&sortBy=submittedDate&sortOrder=descending&max_results=15",
+    "homepageUrl": "https://arxiv.org",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "arXiv ML (cs.LG)",
+    "feedUrl": "https://export.arxiv.org/api/query?search_query=cat:cs.LG&sortBy=submittedDate&sortOrder=descending&max_results=15",
+    "homepageUrl": "https://arxiv.org",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "TechCrunch AI",
+    "feedUrl": "https://techcrunch.com/category/artificial-intelligence/feed/",
+    "homepageUrl": "https://techcrunch.com",
+    "sourceType": "journalism",
+    "credibilityTier": 3,
+    "enabled": true,
+    "pollingInterval": 15,
+    "category": "AI News"
+  },
+  {
+    "sourceName": "VentureBeat AI",
+    "feedUrl": "https://venturebeat.com/category/ai/feed/",
+    "homepageUrl": "https://venturebeat.com",
+    "sourceType": "journalism",
+    "credibilityTier": 3,
+    "enabled": true,
+    "pollingInterval": 15,
+    "category": "AI News"
+  },
+  {
+    "sourceName": "The Verge AI",
+    "feedUrl": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+    "homepageUrl": "https://www.theverge.com",
+    "sourceType": "journalism",
+    "credibilityTier": 3,
+    "enabled": true,
+    "pollingInterval": 15,
+    "category": "AI News"
+  },
+  {
+    "sourceName": "Ars Technica AI",
+    "feedUrl": "https://feeds.arstechnica.com/arstechnica/technology-lab",
+    "homepageUrl": "https://arstechnica.com",
+    "sourceType": "journalism",
+    "credibilityTier": 3,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI News"
+  },
+  {
+    "sourceName": "IEEE Spectrum",
+    "feedUrl": "https://spectrum.ieee.org/feeds/feed.rss",
+    "homepageUrl": "https://spectrum.ieee.org",
+    "sourceType": "journalism",
+    "credibilityTier": 2,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "arXiv NLP (cs.CL)",
+    "feedUrl": "https://export.arxiv.org/api/query?search_query=cat:cs.CL&sortBy=submittedDate&sortOrder=descending&max_results=15",
+    "homepageUrl": "https://arxiv.org",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "arXiv Vision (cs.CV)",
+    "feedUrl": "https://export.arxiv.org/api/query?search_query=cat:cs.CV&sortBy=submittedDate&sortOrder=descending&max_results=15",
+    "homepageUrl": "https://arxiv.org",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "Berkeley AI Research (BAIR)",
+    "feedUrl": "https://bair.berkeley.edu/blog/feed.xml",
+    "homepageUrl": "https://bair.berkeley.edu",
+    "sourceType": "research",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "Stanford HAI",
+    "feedUrl": "https://hai.stanford.edu/news/rss.xml",
+    "homepageUrl": "https://hai.stanford.edu",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "enabled": false,
+    "pollingInterval": 30,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "MIT Technology Review",
+    "feedUrl": "https://www.technologyreview.com/feed/",
+    "homepageUrl": "https://www.technologyreview.com",
+    "sourceType": "journalism",
+    "credibilityTier": 2,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI News"
+  },
+  {
+    "sourceName": "AWS Machine Learning Blog",
+    "feedUrl": "https://aws.amazon.com/blogs/machine-learning/feed/",
+    "homepageUrl": "https://aws.amazon.com/blogs/machine-learning",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI Infrastructure"
+  },
+  {
+    "sourceName": "Google Research Blog",
+    "feedUrl": "https://blog.google/technology/ai/rss/",
+    "homepageUrl": "https://blog.google/technology/ai/",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "enabled": true,
+    "pollingInterval": 30,
+    "category": "AI Research"
+  }
+]

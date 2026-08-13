@@ -1,0 +1,21 @@
+name: Daily Digest
+
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger secure daily digest endpoint
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          DIGEST_SECRET: ${{ secrets.DIGEST_SECRET }}
+        run: |
+          echo "Triggering digest at $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          curl --fail --silent --show-error \
+            -H "x-digest-secret: ${DIGEST_SECRET}" \
+            -X POST "${BACKEND_URL}/api/internal/digest"
+          echo "Daily digest request completed successfully."
