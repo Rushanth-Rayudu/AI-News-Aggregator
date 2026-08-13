@@ -8,7 +8,7 @@ console.log('Key prefix:', key ? key.slice(0, 6) : 'NONE');
 const ai = new GoogleGenAI({ apiKey: key });
 
 ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.6-flash',
     contents: 'Say "Gemini API connected successfully" and nothing else.',
 }).then(res => {
     console.log('Gemini response:', res.text);

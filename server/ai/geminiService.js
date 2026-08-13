@@ -68,7 +68,7 @@ async function processArticle(title, description, sourceTier, url) {
 
     try {
         const response = await aiClient.models.generateContent({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-3.6-flash',
             contents: `Title: ${title}\nURL: ${url}\nContent/Description: ${description}`,
             config: {
                 systemInstruction: SYSTEM_PROMPT,
@@ -95,7 +95,7 @@ async function generateDailyDigest(events) {
     
     try {
         const response = await aiClient.models.generateContent({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-3.6-flash',
             contents: `Summarize the following top AI events of the day in a brief executive overview paragraph (3-4 sentences):\n${eventsPrompt}`,
         });
         return response.text;
