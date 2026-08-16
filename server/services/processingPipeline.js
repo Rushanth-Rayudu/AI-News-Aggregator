@@ -5,6 +5,15 @@ const { fetchFeed } = require('./rssService');
 const { findMatchingEvent } = require('./deduplicationService');
 const { processArticle } = require('../ai/geminiService');
 
+async function syncPostgresSequences() {
+    if (!process.env.DATABASE_URL || !db.pool) return;
+
+    const tables = ['sources', 'events', 'articles', 'daily_digests', 'system_logs'];
+    for (const table of tables) {
+        await db.pool.query(`SELECT setval(pg_get_serial_sequence('${table}', 'id'), COALESCE((SELECT MAX(id) FROM "${table}"), 0), true);`);
+    }
+}
+
 async function processSource(source) {
     console.log(`Processing source: ${source.sourceName}`);
     try {
@@ -86,7 +95,7 @@ async function processSource(source) {
                 item.imageUrl,
                 item.publishedAt.toISOString(),
                 item.fingerprint,
-                isPrimary ? 1 : 0
+                Boolean(isPrimary)
             );
 
             newItemsProcessed++;
@@ -103,6 +112,8 @@ async function processSource(source) {
 
 async function syncSourcesWithRegistry() {
     try {
+        await syncPostgresSequences();
+
         const registryPath = path.join(__dirname, '..', 'feeds', 'registry.json');
         if (!fs.existsSync(registryPath)) return;
 
@@ -111,7 +122,7 @@ async function syncSourcesWithRegistry() {
 
         for (const s of registry) {
             try {
-                const isEnabled = s.enabled !== false ? 1 : 0;
+                const isEnabled = s.enabled !== false ? true : false;
                 let existing = await db.prepare('SELECT id FROM sources WHERE feedUrl = ?').get(s.feedUrl);
                 if (!existing) {
                     existing = await db.prepare('SELECT id FROM sources WHERE sourceName = ?').get(s.sourceName);
@@ -148,7 +159,7 @@ async function syncSourcesWithRegistry() {
 
 async function runPipeline() {
     await syncSourcesWithRegistry();
-    const sources = await db.prepare('SELECT * FROM sources WHERE enabled = 1').all();
+    const sources = await db.prepare('SELECT * FROM sources WHERE enabled = TRUE').all();
     for (const source of sources) {
         await processSource(source);
     }

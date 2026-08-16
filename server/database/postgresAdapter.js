@@ -18,11 +18,53 @@ function normalizeSqlForPostgres(sql) {
 }
 
 function normalizeParams(params) {
-    return params.flat().map((value) => {
-        if (value === 0) return false;
-        if (value === 1) return true;
-        return value;
-    });
+    return params.flat();
+}
+
+function camelizePostgresRow(row) {
+    if (!row || typeof row !== 'object') return row;
+
+    const mapping = {
+        id: 'id',
+        sourcename: 'sourceName',
+        feedurl: 'feedUrl',
+        homepageurl: 'homepageUrl',
+        sourcetype: 'sourceType',
+        credibilitytier: 'credibilityTier',
+        enabled: 'enabled',
+        pollinginterval: 'pollingInterval',
+        category: 'category',
+        lastsuccessfulfetch: 'lastSuccessfulFetch',
+        lasterror: 'lastError',
+        title: 'title',
+        summary: 'summary',
+        whyitmatters: 'whyItMatters',
+        keypoints: 'keyPoints',
+        importancescore: 'importanceScore',
+        confidencescore: 'confidenceScore',
+        confidencelabel: 'confidenceLabel',
+        discoveredat: 'discoveredAt',
+        updatedat: 'updatedAt',
+        eventid: 'eventId',
+        sourceid: 'sourceId',
+        description: 'description',
+        content: 'content',
+        url: 'url',
+        imageurl: 'imageUrl',
+        publishedat: 'publishedAt',
+        fingerprint: 'fingerprint',
+        isprimary: 'isPrimary',
+        sentat: 'sentAt',
+        status: 'status',
+        level: 'level',
+        module: 'module',
+        message: 'message',
+        timestamp: 'timestamp'
+    };
+
+    return Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [mapping[key] ?? key, value])
+    );
 }
 
 class PreparedQuery {
@@ -35,12 +77,12 @@ class PreparedQuery {
         const query = this.sql.trim();
         const sql = /\sLIMIT\s+/i.test(query) ? query : `${query} LIMIT 1`;
         const result = await this.pool.query(sql, normalizeParams(params));
-        return result.rows[0] || undefined;
+        return camelizePostgresRow(result.rows[0]) || undefined;
     }
 
     async all(...params) {
         const result = await this.pool.query(this.sql, normalizeParams(params));
-        return result.rows;
+        return result.rows.map(camelizePostgresRow);
     }
 
     async run(...params) {

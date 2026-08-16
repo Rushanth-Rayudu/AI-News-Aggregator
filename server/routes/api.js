@@ -73,14 +73,29 @@ router.get('/events', async (req, res) => {
 
         const events = await db.prepare(query).all(...params);
 
-        const eventsWithSources = await Promise.all(events.map(async (evt) => {
+        // Fetch every article for the selected events in a single query.
+        // A per-event query (N+1) exhausted the Postgres connection pool for
+        // larger limits and returned 500 "timeout exceeded when trying to connect".
+        let articlesByEventId = {};
+        if (events.length > 0) {
+            const eventIds = events.map(evt => evt.id);
+            const placeholders = eventIds.map(() => '?').join(', ');
             const articles = await db.prepare(`
-                SELECT a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary 
+                SELECT a.eventId, a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary 
                 FROM articles a 
                 JOIN sources s ON a.sourceId = s.id 
-                WHERE a.eventId = ?
-            `).all(evt.id);
-            return { ...evt, sources: articles };
+                WHERE a.eventId IN (${placeholders})
+            `).all(...eventIds);
+
+            articlesByEventId = articles.reduce((byEvent, article) => {
+                (byEvent[article.eventId] = byEvent[article.eventId] || []).push(article);
+                return byEvent;
+            }, {});
+        }
+
+        const eventsWithSources = events.map(evt => ({
+            ...evt,
+            sources: articlesByEventId[evt.id] || [],
         }));
 
         res.json(eventsWithSources);

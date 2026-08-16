@@ -10,7 +10,15 @@ const { syncSourcesWithRegistry } = require('./services/processingPipeline');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
-const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5178,http://localhost:3000').split(',').map(v => v.trim()).filter(Boolean);
+const defaultCorsOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5178',
+    'http://localhost:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5178',
+    'http://127.0.0.1:3000',
+];
+const corsOrigins = (process.env.CORS_ORIGIN || defaultCorsOrigins.join(',')).split(',').map(v => v.trim()).filter(Boolean);
 
 app.disable('x-powered-by');
 app.use(cors({

@@ -197,7 +197,7 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
       clearInterval(statusInterval);
       clearInterval(refreshInterval);
     };
-  }, [filters.sort]);
+  }, [filters.sort, filters.category, filters.timeframe]);
 
   useEffect(() => {
     const handleScroll = () => setShowScroll(window.scrollY > 320);
@@ -211,7 +211,15 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
   async function loadEvents() {
     try {
       setLoading(true);
-      const data = await fetchEvents({ limit: 300, sort: filters.sort });
+      // Let the backend apply category/timeframe filters via SQL (the API already
+      // supports ?category= and ?timeframe=). Client-side filtering alone on a
+      // top-300 importance slice excluded recent events and left the feed empty.
+      const data = await fetchEvents({
+        limit: 300,
+        sort: filters.sort,
+        ...(filters.category && filters.category !== 'All' ? { category: filters.category } : {}),
+        ...(filters.timeframe ? { timeframe: filters.timeframe } : {}),
+      });
       setEvents(data);
       setError(null);
     } catch (e) {
@@ -259,11 +267,9 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
       result = result.filter(e => (e.importanceScore || 0) >= 70);
     }
 
-    if (filters.timeframe) {
-      const hours = filters.timeframe === '6h' ? 6 : filters.timeframe === '24h' ? 24 : 24 * 7;
-      const cutoff = new Date(Date.now() - hours * 3600 * 1000);
-      result = result.filter(e => new Date(e.updatedAt || e.discoveredAt) > cutoff);
-    }
+    // NOTE: timeframe (6h/24h/7d) is applied server-side via ?timeframe= to keep
+    // SQL and client semantics in sync; do not re-filter by timeframe here (a
+    // client-side duplicate filter incorrectly dropped events near the window edge).
 
     if (filters.search && filters.search.trim()) {
       const query = filters.search.trim().toLowerCase();
