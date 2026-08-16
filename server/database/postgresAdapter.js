@@ -113,6 +113,18 @@ function createPostgresAdapter(connectionString) {
         connectionTimeoutMillis: 5000,
     });
 
+    // The database host (e.g. the Supabase connection pooler) may terminate
+    // an idle pooled connection at any time. pg-pool surfaces that as an
+    // 'error' event on the Pool. Without a listener it becomes an *unhandled*
+    // 'error' event, which crashes the entire Node process. That crash takes
+    // the HTTP server down with it: the port stops listening and the Vite
+    // proxy replies with 502 Bad Gateway for every /api request. pg-pool
+    // removes and ends the affected idle client itself, so we only need to
+    // observe the error to keep the process alive.
+    pool.on('error', (err) => {
+        console.error('[pg pool] idle connection dropped (recovered):', err.message);
+    });
+
     return {
         pool,
         prepare(query) {
