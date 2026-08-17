@@ -12,8 +12,8 @@ const TIMEFRAMES = [
   { label: 'Last 7d', value: '7d' },
 ];
 
-export default function Filters({ filters, onChange }) {
-  const { category, timeframe, sort, search, onlyHighConfidence, onlyImportant } = filters;
+export default function Filters({ filters, onChange, watchlistEmpty = false }) {
+  const { category, timeframe, sort, search, onlyHighConfidence, onlyImportant, forYou } = filters;
 
   return (
     <section className="filters-panel glass-panel">
@@ -64,6 +64,14 @@ export default function Filters({ filters, onChange }) {
       <div className="filter-pills-row">
         <button
           type="button"
+          className={forYou ? 'toggle-pill active for-you-pill' : 'toggle-pill for-you-pill'}
+          onClick={() => onChange({ ...filters, forYou: !forYou })}
+          title="Show stories matching your followed topics"
+        >
+          For You
+        </button>
+        <button
+          type="button"
           className={onlyHighConfidence ? 'toggle-pill active' : 'toggle-pill'}
           onClick={() => onChange({ ...filters, onlyHighConfidence: !onlyHighConfidence })}
         >
@@ -77,6 +85,10 @@ export default function Filters({ filters, onChange }) {
           Important only
         </button>
       </div>
+
+      {forYou && watchlistEmpty && (
+        <p className="for-you-hint">Follow topics below to personalize your For You feed.</p>
+      )}
 
       <div className="category-row" role="tablist" aria-label="Category filters">
         {CATEGORIES.slice(0, 10).map(cat => (

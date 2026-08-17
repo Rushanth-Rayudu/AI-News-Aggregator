@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { formatDistanceToNow } from '../utils/timeUtils';
+import { buildConfidenceEvidence, deriveStoryState } from '../utils/eventIntelligence';
+import CredibilityTooltip from './CredibilityTooltip';
 
 const CATEGORY_CLASS_MAP = {
   'Model Release': 'model',
@@ -26,6 +28,9 @@ export default function EventCard({ event, onClick, index = 0 }) {
   const primarySource = sources.find(s => s.isPrimary) || sources[0] || {};
   const importancePct = Math.round(Math.min(100, event.importanceScore || 0));
   const timeAgo = formatDistanceToNow(event.updatedAt || event.discoveredAt);
+  const storyState = deriveStoryState(event);
+  const confidenceEvidence = buildConfidenceEvidence(event);
+  const hasPrimarySource = sources.some(s => s && s.isPrimary);
 
   function handlePointerMove(e) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -36,7 +41,7 @@ export default function EventCard({ event, onClick, index = 0 }) {
 
   return (
     <article
-      className="event-card glass-panel"
+      className={`event-card glass-panel${event.isNew ? ' is-new' : ''}`}
       style={{ '--pointer-x': pointer.x, '--pointer-y': pointer.y, '--index': index }}
       onPointerMove={handlePointerMove}
       onPointerLeave={() => setPointer({ x: '50%', y: '50%' })}
@@ -48,11 +53,22 @@ export default function EventCard({ event, onClick, index = 0 }) {
     >
       <div className="card-top-row">
         <span className={`card-chip ${getCategoryClass(event.category)}`}>{event.category || 'AI News'}</span>
+        {storyState && (
+          <span className={`story-state-badge ${storyState.toLowerCase()}`}>{storyState}</span>
+        )}
+        {hasPrimarySource && (
+          <span className="official-source-badge" title="A primary/official source reported this">
+            Official Source
+          </span>
+        )}
+        {event.isNew && <span className="new-badge">New</span>}
         <span className="card-chip time-tag">{timeAgo}</span>
       </div>
 
       <div className="story-trust-row">
-        <ConfidenceLabel label={event.confidenceLabel} />
+        <CredibilityTooltip label={event.confidenceLabel} evidence={confidenceEvidence}>
+          <ConfidenceLabel label={event.confidenceLabel} />
+        </CredibilityTooltip>
         <span className="card-trust-meta">{importancePct}% importance</span>
         <span className="card-trust-meta">{sources.length} sources</span>
       </div>
@@ -93,3 +109,4 @@ export default function EventCard({ event, onClick, index = 0 }) {
     </article>
   );
 }
+

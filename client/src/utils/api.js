@@ -13,6 +13,27 @@ export async function fetchEvent(id) {
   return res.json();
 }
 
+export async function fetchEventsSince(since, limit = 50) {
+  const params = new URLSearchParams();
+  if (since) params.set('since', since);
+  params.set('limit', String(limit));
+  const res = await fetch(`${BASE}/events/since?${params.toString()}`);
+  if (!res.ok) throw new Error('Failed to fetch recent events');
+  return res.json();
+}
+
+export async function fetchThemes() {
+  const res = await fetch(`${BASE}/themes`);
+  if (!res.ok) throw new Error('Failed to fetch themes');
+  return res.json();
+}
+
+export async function fetchSources() {
+  const res = await fetch(`${BASE}/sources`);
+  if (!res.ok) throw new Error('Failed to fetch sources');
+  return res.json();
+}
+
 export async function fetchStatus() {
   const res = await fetch(`${BASE}/status`);
   if (!res.ok) throw new Error('Failed to fetch status');

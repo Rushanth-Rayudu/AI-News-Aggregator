@@ -28,9 +28,11 @@ router.get('/', (req, res) => {
         status: "online",
         endpoints: {
             "GET /api/status": "System health and database metrics",
-            "GET /api/events": "List deduplicated news events (supports ?category= and ?timeframe=)",
+            "GET /api/events": "List deduplicated news events (supports ?category=, ?timeframe=, ?sort=, ?limit=, ?offset=)",
+            "GET /api/events/since": "Recent events discovered since an ISO timestamp (?since=&limit=)",
             "GET /api/events/:id": "Single event details with source articles",
-            "GET /api/sources": "List monitored RSS news sources",
+            "GET /api/sources": "List monitored RSS news sources with latest article",
+            "GET /api/themes": "Current AI themes derived from recent event data",
             "POST /api/refresh": "Trigger immediate feed refresh",
             "POST /api/send-test-email": "Send daily digest email test"
         }
@@ -39,7 +41,11 @@ router.get('/', (req, res) => {
 
 router.get('/events', async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit, 10) || 50;
+        // Default to 50 for a fast initial load; allow up to 300. offset enables
+        // safe server-side "Load more" pagination without unbounded responses.
+        const rawLimit = parseInt(req.query.limit, 10);
+        const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 300) : 50;
+        const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
         const category = req.query.category;
         const timeframe = req.query.timeframe;
         const sort = req.query.sort || 'importance';
@@ -65,11 +71,11 @@ router.get('/events', async (req, res) => {
         }
 
         if (sort === 'latest') {
-            query += ' ORDER BY updatedAt DESC, importanceScore DESC LIMIT ?';
+            query += ' ORDER BY updatedAt DESC, importanceScore DESC LIMIT ? OFFSET ?';
         } else {
-            query += ' ORDER BY importanceScore DESC, updatedAt DESC LIMIT ?';
+            query += ' ORDER BY importanceScore DESC, updatedAt DESC LIMIT ? OFFSET ?';
         }
-        params.push(limit);
+        params.push(limit, offset);
 
         const events = await db.prepare(query).all(...params);
 
@@ -81,7 +87,7 @@ router.get('/events', async (req, res) => {
             const eventIds = events.map(evt => evt.id);
             const placeholders = eventIds.map(() => '?').join(', ');
             const articles = await db.prepare(`
-                SELECT a.eventId, a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary 
+                SELECT a.eventId, a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
                 FROM articles a 
                 JOIN sources s ON a.sourceId = s.id 
                 WHERE a.eventId IN (${placeholders})
@@ -104,13 +110,83 @@ router.get('/events', async (req, res) => {
     }
 });
 
+// Registered before /events/:id so "since" is not captured as an event id.
+// Returns events discovered after an ISO timestamp with a true total count so
+// the dashboard can answer "what changed since my last visit" without N+1.
+router.get('/events/since', async (req, res) => {
+    try {
+        const since = req.query.since;
+        const rawLimit = parseInt(req.query.limit, 10);
+        const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 50;
+
+        let conditions = [];
+        let params = [];
+        if (since) {
+            conditions.push('discoveredAt > ?');
+            params.push(since);
+        }
+
+        const whereClause = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
+
+        const countRow = await db.prepare(`SELECT COUNT(*) as count FROM events${whereClause}`).get(...params);
+        const events = await db.prepare(
+            `SELECT * FROM events${whereClause} ORDER BY discoveredAt DESC LIMIT ?`
+        ).all(...params, limit);
+
+        let articlesByEventId = {};
+        if (events.length > 0) {
+            const eventIds = events.map(evt => evt.id);
+            const placeholders = eventIds.map(() => '?').join(', ');
+            const articles = await db.prepare(`
+                SELECT a.eventId, a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
+                FROM articles a
+                JOIN sources s ON a.sourceId = s.id
+                WHERE a.eventId IN (${placeholders})
+            `).all(...eventIds);
+
+            articlesByEventId = articles.reduce((byEvent, article) => {
+                (byEvent[article.eventId] = byEvent[article.eventId] || []).push(article);
+                return byEvent;
+            }, {});
+        }
+
+        res.json({
+            count: countRow ? countRow.count || 0 : 0,
+            events: events.map(evt => ({
+                ...evt,
+                sources: articlesByEventId[evt.id] || [],
+            })),
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Current themes derived from real recent event data (no hard-coded trends).
+router.get('/themes', async (req, res) => {
+    try {
+        const themes = await db.prepare(`
+            SELECT category, COUNT(*) as count, MAX(updatedAt) as latestUpdatedAt
+            FROM events
+            WHERE updatedAt >= datetime('now', '-7 days')
+              AND category IS NOT NULL AND category != ''
+            GROUP BY category
+            ORDER BY count DESC, latestUpdatedAt DESC
+            LIMIT 8
+        `).all();
+        res.json(themes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.get('/events/:id', async (req, res) => {
     try {
         const event = await db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
         if (!event) return res.status(404).json({ error: 'Event not found' });
 
         const articles = await db.prepare(`
-            SELECT a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary 
+            SELECT a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
             FROM articles a 
             JOIN sources s ON a.sourceId = s.id 
             WHERE a.eventId = ?
@@ -126,7 +202,25 @@ router.get('/events/:id', async (req, res) => {
 router.get('/sources', async (req, res) => {
     try {
         const sources = await db.prepare('SELECT * FROM sources').all();
-        res.json(sources);
+
+        // Attach each source's latest article metadata in a single windowed
+        // query (no per-source N+1). Works on both Postgres and SQLite >= 3.25.
+        const latestBySource = {};
+        if (sources.length > 0) {
+            const latest = await db.prepare(`
+                SELECT sourceId, title, publishedAt FROM (
+                    SELECT a.sourceId, a.title, a.publishedAt,
+                           ROW_NUMBER() OVER (PARTITION BY a.sourceId ORDER BY a.publishedAt DESC) AS rn
+                    FROM articles a
+                ) ranked WHERE ranked.rn = 1
+            `).all();
+
+            for (const row of latest) {
+                latestBySource[row.sourceId] = { title: row.title, publishedAt: row.publishedAt };
+            }
+        }
+
+        res.json(sources.map(s => ({ ...s, latestArticle: latestBySource[s.id] || null })));
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

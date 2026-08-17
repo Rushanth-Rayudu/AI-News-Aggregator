@@ -36,6 +36,7 @@ function camelizePostgresRow(row) {
         category: 'category',
         lastsuccessfulfetch: 'lastSuccessfulFetch',
         lasterror: 'lastError',
+        latestupdatedat: 'latestUpdatedAt',
         title: 'title',
         summary: 'summary',
         whyitmatters: 'whyItMatters',
