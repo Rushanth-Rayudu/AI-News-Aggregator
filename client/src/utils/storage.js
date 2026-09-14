@@ -1,23 +1,14 @@
 // Lightweight localStorage-backed user preferences. No accounts, no auth —
 // everything lives in the browser only.
 
-export const WATCHLIST_TOPICS = [
-  { id: 'openai', label: 'OpenAI', keywords: ['openai'] },
-  { id: 'anthropic', label: 'Anthropic', keywords: ['anthropic', 'claude'] },
-  { id: 'gemini', label: 'Gemini', keywords: ['gemini'] },
-  { id: 'meta', label: 'Meta', keywords: ['meta'] },
-  { id: 'mistral', label: 'Mistral', keywords: ['mistral'] },
-  { id: 'nvidia', label: 'NVIDIA', keywords: ['nvidia'] },
-  { id: 'agents', label: 'Agents', keywords: ['agents', 'agentic', 'agent'] },
-  { id: 'robotics', label: 'Robotics', keywords: ['robotics', 'robot', 'humanoid'] },
-  { id: 'open-source', label: 'Open Source', keywords: ['open source', 'open-source'] },
-];
+import interests from '../../../shared/interests.json' with { type: 'json' };
+export const WATCHLIST_TOPICS = interests;
 
 const WATCHLIST_KEY = 'ai-intelligence-watchlist';
 const LAST_VISIT_KEY = 'ai-intelligence-last-visit';
 
 function hasStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+  try { return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined'; } catch { return false; }
 }
 
 export function getWatchlist() {
@@ -48,7 +39,7 @@ export function getLastVisit() {
     const raw = localStorage.getItem(LAST_VISIT_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed || !parsed.visitedAt) return null;
+    if (!parsed || !parsed.visitedAt || !Number.isFinite(Date.parse(parsed.visitedAt))) return null;
     return parsed;
   } catch {
     return null;

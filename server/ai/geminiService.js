@@ -1,5 +1,9 @@
 const { GoogleGenAI } = require('@google/genai');
+const { inferCategory } = require('../services/taxonomy');
 
+const { AnalysisCache } = require('./analysisCache');
+const { createHash } = require('crypto');
+const analysisCache = new AnalysisCache();
 let ai = null;
 
 function getAIClient() {
@@ -46,23 +50,26 @@ Respond ONLY with a valid JSON object of this exact structure:
 `;
 
 async function processArticle(title, description, sourceTier, url) {
+    const key = createHash('sha256').update(JSON.stringify([title, description, sourceTier, url])).digest('hex');
+    const cached = analysisCache.get(key);
+    if (cached) return cached;
     const aiClient = getAIClient();
     
     // Default fallback if AI is not configured or fails
     const fallback = {
-        isAiRelated: true,
-        category: "Other",
+        isAiRelated: /\b(ai|artificial intelligence|machine learning|llm|gpt|claude|gemini|neural|robotics|agentic|deep learning|model training|inference)\b/i.test(title+' '+description),
+        category: inferCategory(title, description),
         hasHype: false,
         summary: {
             whatHappened: description ? description.slice(0, 300) + '...' : 'No description available.',
             whyItMatters: "AI summarization unavailable.",
             keyPoints: ["Read original article for details."]
         },
-        importanceScore: sourceTier === 1 ? 80 : 50,
-        confidenceLabel: sourceTier === 1 ? 'High' : 'Medium'
+        importanceScore: 40,
+        confidenceLabel: 'Low'
     };
 
-    if (!aiClient) {
+    if (!aiClient || analysisCache.paused) {
         return fallback;
     }
 
@@ -78,16 +85,24 @@ async function processArticle(title, description, sourceTier, url) {
 
         const resultText = response.text;
         const result = JSON.parse(resultText);
+        if(typeof result.isAiRelated!=='boolean' || !result.summary || typeof result.summary.whatHappened!=='string') return fallback;
+        result.category=CATEGORIES.includes(result.category) && result.category !== 'Other' ? result.category : inferCategory(title, description);
+        result.importanceScore=Math.max(0,Math.min(100,Number(result.importanceScore)||0));
+        result.confidenceLabel=['High','Medium','Low'].includes(result.confidenceLabel)?result.confidenceLabel:'Low';
+        result.summary.whyItMatters=String(result.summary.whyItMatters||'');
+        result.summary.keyPoints=Array.isArray(result.summary.keyPoints)?result.summary.keyPoints.filter(p=>typeof p==='string'):[];
+        analysisCache.set(key, result);
         return result;
     } catch (error) {
-        console.error("Gemini API error:", error.message);
+        if (Number(error.status || error.code) === 429 || /429|RESOURCE_EXHAUSTED/i.test(error.message || '')) analysisCache.pause();
+        console.error('Gemini analysis unavailable; using fallback.');
         return fallback;
     }
 }
 
 async function generateDailyDigest(events) {
     const aiClient = getAIClient();
-    if (!aiClient || !events || events.length === 0) {
+    if (!aiClient || analysisCache.paused || !events || events.length === 0) {
         return "No AI summary available today or no new events.";
     }
 
@@ -100,7 +115,8 @@ async function generateDailyDigest(events) {
         });
         return response.text;
     } catch (error) {
-        console.error("Gemini Daily Digest error:", error.message);
+        if (Number(error.status || error.code) === 429 || /429|RESOURCE_EXHAUSTED/i.test(error.message || '')) analysisCache.pause();
+        console.error('Gemini digest generation unavailable.');
         return "Summary generation failed.";
     }
 }

@@ -1,6 +1,14 @@
+export function parseTimestamp(dateStr) {
+  if (!dateStr) return new Date(NaN);
+  const normalized = typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(dateStr)
+    ? `${dateStr.replace(' ', 'T')}Z`
+    : dateStr;
+  return new Date(normalized);
+}
+
 export function formatDistanceToNow(dateStr) {
   if (!dateStr) return 'Unknown time';
-  const date = new Date(dateStr);
+  const date = parseTimestamp(dateStr);
   if (isNaN(date.getTime())) return 'Unknown time';
   const now = new Date();
   const diffMs = now - date;
@@ -18,7 +26,7 @@ export function formatDistanceToNow(dateStr) {
 
 export function formatDate(dateStr) {
   if (!dateStr) return '';
-  const d = new Date(dateStr);
+  const d = parseTimestamp(dateStr);
   if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }

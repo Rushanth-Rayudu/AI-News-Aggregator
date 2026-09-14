@@ -1,0 +1,18 @@
+[
+  {"id":"openai","label":"OpenAI","group":"Organizations","keywords":["openai","gpt","chatgpt"]},
+  {"id":"anthropic","label":"Anthropic","group":"Organizations","keywords":["anthropic","claude"]},
+  {"id":"google","label":"Google / DeepMind","group":"Organizations","keywords":["google","deepmind","gemini"]},
+  {"id":"meta","label":"Meta","group":"Organizations","keywords":["meta","llama"]},
+  {"id":"microsoft","label":"Microsoft","group":"Organizations","keywords":["microsoft","azure","copilot"]},
+  {"id":"nvidia","label":"NVIDIA","group":"Organizations","keywords":["nvidia","nemotron"]},
+  {"id":"apple","label":"Apple","group":"Organizations","keywords":["apple","siri"]},
+  {"id":"amazon","label":"Amazon","group":"Organizations","keywords":["amazon","aws","bedrock"]},
+  {"id":"mistral","label":"Mistral","group":"Organizations","keywords":["mistral"]},
+  {"id":"gemini","label":"Gemini","group":"Model families","keywords":["gemini"]},
+  {"id":"agents","label":"Agents","group":"Topics","keywords":["agents","agentic","agent"]},
+  {"id":"robotics","label":"Robotics","group":"Topics","keywords":["robotics","robot","humanoid"]},
+  {"id":"open-source","label":"Open Source","group":"Topics","keywords":["open source","open-source"]},
+  {"id":"infrastructure","label":"AI Infrastructure","group":"Topics","keywords":["ai infrastructure","inference","data center","datacenter"]},
+  {"id":"safety","label":"AI Safety","group":"Topics","keywords":["ai safety","alignment","safeguards"]},
+  {"id":"research","label":"AI Research","group":"Topics","keywords":["research","paper","benchmark"]}
+]

@@ -105,6 +105,42 @@ class PreparedQuery {
     }
 }
 
+
+async function runTransaction(pool, callback) {
+    const client = await pool.connect();
+    let connectionError;
+    let releaseError;
+    const onError = error => { connectionError ||= error; };
+    client.on('error', onError);
+    const query = async (...args) => {
+        if (connectionError) throw connectionError;
+        const result = await client.query(...args);
+        if (connectionError) throw connectionError;
+        return result;
+    };
+    const transactionClient = { query };
+    try {
+        await query('BEGIN');
+        const result = await callback({
+            pool: transactionClient,
+            prepare: sql => new PreparedQuery(transactionClient, sql),
+        });
+        await query('COMMIT');
+        return result;
+    } catch (error) {
+        releaseError = connectionError;
+        if (!connectionError) {
+            try { await client.query('ROLLBACK'); }
+            catch (rollbackError) { releaseError = rollbackError; }
+        }
+        throw error;
+    } finally {
+        // Keep the listener attached until the pool owns or destroys the client.
+        client.release(releaseError || connectionError);
+        client.removeListener('error', onError);
+    }
+}
+
 function createPostgresAdapter(connectionString) {
     const pool = new Pool({
         connectionString,
@@ -123,11 +159,14 @@ function createPostgresAdapter(connectionString) {
     // removes and ends the affected idle client itself, so we only need to
     // observe the error to keep the process alive.
     pool.on('error', (err) => {
-        console.error('[pg pool] idle connection dropped (recovered):', err.message);
+        console.error('[pg pool] idle connection dropped; next request will reconnect:', err.code || 'connection error');
     });
 
     return {
         pool,
+        async withTransaction(callback) {
+            return runTransaction(pool, callback);
+        },
         prepare(query) {
             return new PreparedQuery(pool, query);
         },
@@ -142,5 +181,6 @@ function createPostgresAdapter(connectionString) {
 
 module.exports = {
     createPostgresAdapter,
+    runTransaction,
     normalizeSqlForPostgres,
 };

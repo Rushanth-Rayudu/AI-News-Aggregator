@@ -1,0 +1,58 @@
+[
+  [
+    {
+      "title": "GPT-6 Astra: A new generation of intelligence",
+      "url": "https://openai.com/index/gpt-6-astra",
+      "publishedAt": "2026-09-03T11:00:00.000Z",
+      "source": "OpenAI Blog"
+    },
+    {
+      "title": "GPT‑6 Astra",
+      "url": "https://simonwillison.net/2026/Sep/3/gpt6-astra/",
+      "publishedAt": "2026-09-03T20:18:41.000Z",
+      "source": "Simon Willison"
+    }
+  ],
+  [
+    {
+      "title": "Proactive cyber defense for governments and enterprises",
+      "url": "https://deepmind.google/blog/proactive-cyber-defense-for-governments-and-enterprises/",
+      "publishedAt": "2026-09-02T16:24:24.000Z",
+      "source": "Google DeepMind Blog"
+    },
+    {
+      "title": "Proactive cyber defense for governments and enterprises",
+      "url": "https://blog.google/innovation-and-ai/technology/safety-security/fairwind-program/",
+      "publishedAt": "2026-09-02T15:40:00.000Z",
+      "source": "Google Research Blog"
+    }
+  ],
+  [
+    {
+      "title": "NVIDIA to Acquire Hugging Face",
+      "url": "https://blogs.nvidia.com/blog/nvidia-to-acquire-hugging-face/",
+      "publishedAt": "2026-09-03T11:56:49.000Z",
+      "source": "NVIDIA AI Blog"
+    },
+    {
+      "title": "NVIDIA to Acquire Hugging Face",
+      "url": "https://blogs.nvidia.com/blog/nvidia-to-acquire-hugging-face/",
+      "publishedAt": "2026-09-03T11:59:49.000Z",
+      "source": "NVIDIA Newsroom"
+    }
+  ],
+  [
+    {
+      "title": "Compile by Training: Turning Natural-Language Specifications into Local Neural Functions",
+      "url": "https://arxiv.org/abs/2609.04199v1",
+      "publishedAt": "2026-09-03T17:59:49.000Z",
+      "source": "arXiv AI (cs.AI)"
+    },
+    {
+      "title": "Compile by Training: Turning Natural-Language Specifications into Local Neural Functions",
+      "url": "https://arxiv.org/abs/2609.04199v1",
+      "publishedAt": "2026-09-03T17:59:49.000Z",
+      "source": "arXiv ML (cs.LG)"
+    }
+  ]
+]

@@ -1,5 +1,6 @@
 const Parser = require('rss-parser');
 const crypto = require('crypto');
+const { decodeFeedText } = require('./textNormalization');
 
 const parser = new Parser({
     timeout: 10000,
@@ -21,11 +22,11 @@ async function fetchFeed(feedUrl) {
         const cutoffDate = new Date(Date.now() - maxAgeMs);
 
         const parsedItems = feed.items.map(item => {
-            const title = item.title ? item.title.trim() : 'No Title';
-            const url = item.link || item.guid || '';
+            const title = item.title ? decodeFeedText(item.title).trim() : 'No Title';
+            const url = canonicalUrl(item.link || item.guid || '');
             const description = item.contentSnippet || item.content || '';
             
-            let publishedAt = new Date();
+            let publishedAt = null;
             if (item.pubDate || item.isoDate) {
                 const parsedDate = new Date(item.isoDate || item.pubDate);
                 if (!isNaN(parsedDate.getTime())) {
@@ -51,7 +52,7 @@ async function fetchFeed(feedUrl) {
                 imageUrl,
                 fingerprint
             };
-        });
+        }).filter(item => item.url && item.publishedAt && item.publishedAt <= new Date(Date.now() + 300000));
 
         // Filter out items older than cutoffDate (unless cutoff is 0 / disabled)
         if (maxAgeDays > 0) {
@@ -64,7 +65,13 @@ async function fetchFeed(feedUrl) {
     }
 }
 
-module.exports = {
+function canonicalUrl(value) {
+    try { const u=new URL(value); if(!['http:','https:'].includes(u.protocol))return ''; u.hash='';
+      for(const key of [...u.searchParams.keys()])if(/^utm_|^(fbclid|gclid|mc_cid|mc_eid)$/i.test(key))u.searchParams.delete(key);
+      return u.toString();
+    }catch{return '';}
+}
+module.exports = { canonicalUrl,
     fetchFeed,
     generateFingerprint
 };

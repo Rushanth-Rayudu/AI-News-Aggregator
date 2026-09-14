@@ -3,6 +3,9 @@ const db = require('../database/db');
 const { runPipeline } = require('../services/processingPipeline');
 const { sendDailyDigest } = require('../email/digestService');
 
+const { enrichEvent, metadata, healthOf } = require('../services/sourceIntelligence');
+const { eventQuery } = require('../services/searchService');
+const { fetchDiagnostics } = require('../services/sourceHealth');
 const router = express.Router();
 
 function requireInternalSecret(headerName, envVarName) {
@@ -50,32 +53,7 @@ router.get('/events', async (req, res) => {
         const timeframe = req.query.timeframe;
         const sort = req.query.sort || 'importance';
 
-        let query = 'SELECT * FROM events';
-        let params = [];
-        let conditions = [];
-
-        if (category && category !== 'All') {
-            conditions.push('category = ?');
-            params.push(category);
-        }
-
-        if (timeframe) {
-            let hours = 24;
-            if (timeframe === '6h') hours = 6;
-            if (timeframe === '7d') hours = 24 * 7;
-            conditions.push(`updatedAt >= datetime('now', '-${hours} hours')`);
-        }
-
-        if (conditions.length > 0) {
-            query += ' WHERE ' + conditions.join(' AND ');
-        }
-
-        if (sort === 'latest') {
-            query += ' ORDER BY updatedAt DESC, importanceScore DESC LIMIT ? OFFSET ?';
-        } else {
-            query += ' ORDER BY importanceScore DESC, updatedAt DESC LIMIT ? OFFSET ?';
-        }
-        params.push(limit, offset);
+        const { query, params } = eventQuery({...req.query,limit,offset,category,timeframe,sort});
 
         const events = await db.prepare(query).all(...params);
 
@@ -87,7 +65,7 @@ router.get('/events', async (req, res) => {
             const eventIds = events.map(evt => evt.id);
             const placeholders = eventIds.map(() => '?').join(', ');
             const articles = await db.prepare(`
-                SELECT a.eventId, a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
+                SELECT a.eventId, a.title, a.description, a.url, a.publishedAt, a.discoveredAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
                 FROM articles a 
                 JOIN sources s ON a.sourceId = s.id 
                 WHERE a.eventId IN (${placeholders})
@@ -99,14 +77,11 @@ router.get('/events', async (req, res) => {
             }, {});
         }
 
-        const eventsWithSources = events.map(evt => ({
-            ...evt,
-            sources: articlesByEventId[evt.id] || [],
-        }));
+        const eventsWithSources = events.map(evt => enrichEvent(evt, articlesByEventId[evt.id] || []));
 
         res.json(eventsWithSources);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
@@ -123,14 +98,16 @@ router.get('/events/since', async (req, res) => {
         let params = [];
         if (since) {
             conditions.push('discoveredAt > ?');
-            params.push(since);
+            const parsed = new Date(since);
+            if (!Number.isFinite(parsed.getTime())) return res.status(400).json({ error: 'Invalid visit timestamp' });
+            params.push(parsed.toISOString().replace('T', ' ').replace('Z', ''));
         }
 
         const whereClause = conditions.length > 0 ? ` WHERE ${conditions.join(' AND ')}` : '';
 
         const countRow = await db.prepare(`SELECT COUNT(*) as count FROM events${whereClause}`).get(...params);
         const events = await db.prepare(
-            `SELECT * FROM events${whereClause} ORDER BY discoveredAt DESC LIMIT ?`
+            `SELECT * FROM events${whereClause} ORDER BY importanceScore DESC, discoveredAt DESC LIMIT ?`
         ).all(...params, limit);
 
         let articlesByEventId = {};
@@ -138,7 +115,7 @@ router.get('/events/since', async (req, res) => {
             const eventIds = events.map(evt => evt.id);
             const placeholders = eventIds.map(() => '?').join(', ');
             const articles = await db.prepare(`
-                SELECT a.eventId, a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
+                SELECT a.eventId, a.title, a.description, a.url, a.publishedAt, a.discoveredAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
                 FROM articles a
                 JOIN sources s ON a.sourceId = s.id
                 WHERE a.eventId IN (${placeholders})
@@ -152,13 +129,10 @@ router.get('/events/since', async (req, res) => {
 
         res.json({
             count: countRow ? countRow.count || 0 : 0,
-            events: events.map(evt => ({
-                ...evt,
-                sources: articlesByEventId[evt.id] || [],
-            })),
+            events: events.map(evt => enrichEvent(evt, articlesByEventId[evt.id] || [])),
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
@@ -176,7 +150,7 @@ router.get('/themes', async (req, res) => {
         `).all();
         res.json(themes);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
@@ -186,22 +160,23 @@ router.get('/events/:id', async (req, res) => {
         if (!event) return res.status(404).json({ error: 'Event not found' });
 
         const articles = await db.prepare(`
-            SELECT a.title, a.url, a.publishedAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
+            SELECT a.title, a.description, a.url, a.publishedAt, a.discoveredAt, s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
             FROM articles a 
             JOIN sources s ON a.sourceId = s.id 
             WHERE a.eventId = ?
         `).all(event.id);
 
         event.sources = articles;
-        res.json(event);
+        res.json(enrichEvent(event));
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
 router.get('/sources', async (req, res) => {
     try {
         const sources = await db.prepare('SELECT * FROM sources').all();
+        const diagnostics = await fetchDiagnostics(db);
 
         // Attach each source's latest article metadata in a single windowed
         // query (no per-source N+1). Works on both Postgres and SQLite >= 3.25.
@@ -220,21 +195,27 @@ router.get('/sources', async (req, res) => {
             }
         }
 
-        res.json(sources.map(s => ({ ...s, latestArticle: latestBySource[s.id] || null })));
+        res.json(sources.map(s => ({ ...metadata(s), ...diagnostics[s.id], ...healthOf(s, {publishedAt:diagnostics[s.id]?.lastArticleAt || latestBySource[s.id]?.publishedAt}), latestArticle: latestBySource[s.id] || null, lastError: s.lastError ? healthOf(s,latestBySource[s.id]).healthReason : null })));
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
 router.get('/status', async (req, res) => {
     try {
-        const sources = await db.prepare('SELECT COUNT(*) as total, SUM(CASE WHEN lastError IS NULL THEN 1 ELSE 0 END) as healthy FROM sources').get();
+        const sourceRows = await db.prepare('SELECT s.*, MAX(a.publishedAt) AS publishedAt FROM sources s LEFT JOIN articles a ON a.sourceId=s.id GROUP BY s.id').all();
+        const diagnostics = await fetchDiagnostics(db);
+        const sources = {total:sourceRows.length,enabled:0,disabled:0,healthy:0,degraded:0,stale:0,failed:0};
+        for(const s of sourceRows) {
+            if (s.enabled) sources.enabled++;
+            sources[healthOf(s,{publishedAt:diagnostics[s.id]?.lastArticleAt || s.publishedAt}).health]++;
+        }
         const articles = await db.prepare('SELECT COUNT(*) as count FROM articles').get();
         const events = await db.prepare('SELECT COUNT(*) as count FROM events').get();
         const lastDigest = await db.prepare('SELECT sentAt FROM daily_digests ORDER BY id DESC LIMIT 1').get();
 
         res.json({
-            sources: { total: sources.total || 0, healthy: sources.healthy || 0 },
+            sources,
             articles: articles.count || 0,
             events: events.count || 0,
             geminiConfigured: !!process.env.GEMINI_API_KEY,
@@ -242,27 +223,27 @@ router.get('/status', async (req, res) => {
             lastDigest: lastDigest ? lastDigest.sentAt : null
         });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
 // Admin endpoints (in production add authentication)
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', requireInternalSecret('x-ingest-secret', 'INGEST_SECRET'), async (req, res) => {
     try {
         // Run async, don't wait for completion to avoid timeout
         runPipeline().catch(console.error);
         res.json({ status: 'started' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
-router.post('/send-test-email', async (req, res) => {
+router.post('/send-test-email', requireInternalSecret('x-digest-secret', 'DIGEST_SECRET'), async (req, res) => {
     try {
         await sendDailyDigest({ dryRun: req.body && req.body.dryRun === true });
         res.json({ status: 'sent' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
@@ -271,7 +252,7 @@ router.post('/internal/ingest', requireInternalSecret('x-ingest-secret', 'INGEST
         await runPipeline();
         res.json({ status: 'ingest started' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 
@@ -281,7 +262,7 @@ router.post('/internal/digest', requireInternalSecret('x-digest-secret', 'DIGEST
         const result = await sendDailyDigest({ dryRun });
         res.json({ status: dryRun ? 'digest dry-run' : 'digest sent', result });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }
 });
 

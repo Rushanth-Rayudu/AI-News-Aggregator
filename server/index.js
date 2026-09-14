@@ -6,6 +6,7 @@ const path = require('path');
 const db = require('./database/db');
 const { initScheduler } = require('./scheduler/cronJobs');
 const apiRoutes = require('./routes/api');
+const { runBackgroundJob } = require('./services/backgroundJob');
 const { syncSourcesWithRegistry } = require('./services/processingPipeline');
 
 const app = express();
@@ -56,7 +57,7 @@ app.use((req, res) => {
 });
 
 // Sync source registry on startup
-syncSourcesWithRegistry();
+runBackgroundJob('Startup registry sync', syncSourcesWithRegistry);
 
 
 // Start Scheduler

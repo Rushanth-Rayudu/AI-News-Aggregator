@@ -1,3 +1,4 @@
+const { runBackgroundJob } = require('../services/backgroundJob');
 const cron = require('node-cron');
 const { runPipeline } = require('../services/processingPipeline');
 const { sendDailyDigest } = require('../email/digestService');
@@ -16,20 +17,20 @@ function initScheduler() {
     console.log(`Setting up RSS polling every ${pollInterval} minutes.`);
     cron.schedule(`*/${pollInterval} * * * *`, async () => {
         console.log(`[Cron] Starting scheduled RSS pipeline run at ${new Date().toISOString()}`);
-        await runPipeline();
+        await runBackgroundJob('Scheduled RSS', runPipeline);
     });
 
     console.log(`Setting up daily digest at ${digestHour}:${digestMinute} timezone: ${digestTimezone}`);
     cron.schedule(`${digestMinute} ${digestHour} * * *`, async () => {
         console.log(`[Cron] Starting scheduled daily digest at ${new Date().toISOString()}`);
-        await sendDailyDigest();
+        await runBackgroundJob('Daily digest', sendDailyDigest);
     }, {
         timezone: digestTimezone
     });
 
     setTimeout(() => {
         console.log("[Startup] Running initial pipeline fetch...");
-        runPipeline();
+        return runBackgroundJob('Startup RSS', runPipeline);
     }, 2000);
 }
 

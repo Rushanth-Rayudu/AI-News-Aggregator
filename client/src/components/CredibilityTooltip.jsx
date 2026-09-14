@@ -30,10 +30,9 @@ export default function CredibilityTooltip({ label, evidence, children }) {
   }
 
   return (
-    <span className="cred-tooltip-wrap" ref={wrapRef}>
+    <span className="cred-wrap" ref={wrapRef}>
       <button
         type="button"
-        className="cred-tooltip-trigger"
         aria-expanded={open}
         aria-label={`Why is this story ${label ? label.toLowerCase() : ''} confidence?`}
         onClick={e => {
@@ -46,11 +45,9 @@ export default function CredibilityTooltip({ label, evidence, children }) {
         {children}
       </button>
       {open && (
-        <span className="cred-tooltip" role="tooltip">
-          <span className="cred-tooltip-title">
-            Why {label ? label.toLowerCase() : ''} confidence
-          </span>
-          <ul className="cred-tooltip-list">
+        <span className="cred-pop" role="tooltip">
+          <span className="m-label">Why {label ? label.toLowerCase() : ''} confidence</span>
+          <ul>
             {evidence.map((item, i) => (
               <li key={i}>{item}</li>
             ))}

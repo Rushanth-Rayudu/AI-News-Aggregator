@@ -7,7 +7,15 @@
     "credibilityTier": 1,
     "enabled": true,
     "pollingInterval": 15,
-    "category": "AI Companies"
+    "category": "AI Companies",
+    "organization": "OpenAI",
+    "aliases": [
+      "openai",
+      "gpt",
+      "chatgpt",
+      "codex"
+    ],
+    "qualityTier": "A"
   },
   {
     "sourceName": "Google DeepMind Blog",
@@ -17,7 +25,15 @@
     "credibilityTier": 1,
     "enabled": true,
     "pollingInterval": 15,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "Google",
+    "aliases": [
+      "google",
+      "gemini",
+      "deepmind",
+      "gemma"
+    ],
+    "qualityTier": "A"
   },
   {
     "sourceName": "Anthropic News",
@@ -27,7 +43,13 @@
     "credibilityTier": 1,
     "enabled": false,
     "pollingInterval": 15,
-    "category": "AI Safety"
+    "category": "AI Safety",
+    "organization": "Anthropic News",
+    "aliases": [
+      "Anthropic News"
+    ],
+    "qualityTier": "A",
+    "disabledReason": "Official endpoint returns HTTP 404; no stable official RSS verified"
   },
   {
     "sourceName": "Meta AI Blog",
@@ -37,7 +59,13 @@
     "credibilityTier": 1,
     "enabled": true,
     "pollingInterval": 15,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "Meta",
+    "aliases": [
+      "meta",
+      "llama"
+    ],
+    "qualityTier": "A"
   },
   {
     "sourceName": "Hugging Face Blog",
@@ -47,7 +75,12 @@
     "credibilityTier": 1,
     "enabled": true,
     "pollingInterval": 15,
-    "category": "Open Source AI"
+    "category": "Open Source AI",
+    "organization": "Hugging Face",
+    "aliases": [
+      "hugging face"
+    ],
+    "qualityTier": "A"
   },
   {
     "sourceName": "Microsoft Research Blog",
@@ -57,17 +90,32 @@
     "credibilityTier": 1,
     "enabled": true,
     "pollingInterval": 30,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "Microsoft",
+    "aliases": [
+      "microsoft",
+      "azure",
+      "copilot",
+      "phi"
+    ],
+    "qualityTier": "A"
   },
   {
     "sourceName": "NVIDIA AI Blog",
-    "feedUrl": "https://blogs.nvidia.com/blog/category/deep-learning/feed/",
+    "feedUrl": "https://blogs.nvidia.com/feed/",
     "homepageUrl": "https://blogs.nvidia.com",
     "sourceType": "primary",
     "credibilityTier": 1,
     "enabled": true,
     "pollingInterval": 30,
-    "category": "AI Chips / Hardware"
+    "category": "AI Chips / Hardware",
+    "organization": "NVIDIA",
+    "aliases": [
+      "nvidia",
+      "cuda",
+      "blackwell"
+    ],
+    "qualityTier": "A"
   },
   {
     "sourceName": "MIT News - AI",
@@ -77,7 +125,12 @@
     "credibilityTier": 2,
     "enabled": true,
     "pollingInterval": 30,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "MIT",
+    "aliases": [
+      "mit"
+    ],
+    "qualityTier": "C"
   },
   {
     "sourceName": "arXiv AI (cs.AI)",
@@ -87,7 +140,12 @@
     "credibilityTier": 2,
     "enabled": true,
     "pollingInterval": 60,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "arXiv",
+    "aliases": [
+      "arxiv"
+    ],
+    "qualityTier": "C"
   },
   {
     "sourceName": "arXiv ML (cs.LG)",
@@ -97,7 +155,12 @@
     "credibilityTier": 2,
     "enabled": true,
     "pollingInterval": 60,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "arXiv",
+    "aliases": [
+      "arxiv"
+    ],
+    "qualityTier": "C"
   },
   {
     "sourceName": "TechCrunch AI",
@@ -107,7 +170,11 @@
     "credibilityTier": 3,
     "enabled": true,
     "pollingInterval": 15,
-    "category": "AI News"
+    "category": "AI News",
+    "organization": "Regent",
+    "aliases": [],
+    "qualityTier": "B",
+    "disabledReason": "Feed repeatedly returns HTTP 429 to the ingestion client; retained disabled to preserve historical source identity"
   },
   {
     "sourceName": "VentureBeat AI",
@@ -115,9 +182,15 @@
     "homepageUrl": "https://venturebeat.com",
     "sourceType": "journalism",
     "credibilityTier": 3,
-    "enabled": true,
+    "enabled": false,
     "pollingInterval": 15,
-    "category": "AI News"
+    "category": "AI News",
+    "organization": "VentureBeat AI",
+    "aliases": [
+      "VentureBeat AI"
+    ],
+    "qualityTier": "B",
+    "disabledReason": "Feed repeatedly returns HTTP 429 to the ingestion client; retained disabled to preserve historical source identity"
   },
   {
     "sourceName": "The Verge AI",
@@ -127,7 +200,10 @@
     "credibilityTier": 3,
     "enabled": true,
     "pollingInterval": 15,
-    "category": "AI News"
+    "category": "AI News",
+    "organization": "Vox Media",
+    "aliases": [],
+    "qualityTier": "B"
   },
   {
     "sourceName": "Ars Technica AI",
@@ -137,7 +213,10 @@
     "credibilityTier": 3,
     "enabled": true,
     "pollingInterval": 30,
-    "category": "AI News"
+    "category": "AI News",
+    "organization": "Condé Nast",
+    "aliases": [],
+    "qualityTier": "B"
   },
   {
     "sourceName": "IEEE Spectrum",
@@ -147,7 +226,12 @@
     "credibilityTier": 2,
     "enabled": true,
     "pollingInterval": 30,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "IEEE Spectrum",
+    "aliases": [
+      "IEEE Spectrum"
+    ],
+    "qualityTier": "B"
   },
   {
     "sourceName": "arXiv NLP (cs.CL)",
@@ -157,7 +241,12 @@
     "credibilityTier": 2,
     "enabled": true,
     "pollingInterval": 60,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "arXiv",
+    "aliases": [
+      "arxiv"
+    ],
+    "qualityTier": "C"
   },
   {
     "sourceName": "arXiv Vision (cs.CV)",
@@ -167,7 +256,12 @@
     "credibilityTier": 2,
     "enabled": true,
     "pollingInterval": 60,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "arXiv",
+    "aliases": [
+      "arxiv"
+    ],
+    "qualityTier": "C"
   },
   {
     "sourceName": "Berkeley AI Research (BAIR)",
@@ -175,9 +269,15 @@
     "homepageUrl": "https://bair.berkeley.edu",
     "sourceType": "research",
     "credibilityTier": 1,
-    "enabled": true,
+    "enabled": false,
     "pollingInterval": 30,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "University of California Berkeley",
+    "aliases": [
+      "berkeley"
+    ],
+    "qualityTier": "C",
+    "disabledReason": "Repeated connection timeouts in live audit; retained disabled to preserve historical source identity"
   },
   {
     "sourceName": "Stanford HAI",
@@ -187,7 +287,13 @@
     "credibilityTier": 2,
     "enabled": false,
     "pollingInterval": 30,
-    "category": "AI Research"
+    "category": "AI Research",
+    "organization": "Stanford University",
+    "aliases": [
+      "stanford"
+    ],
+    "qualityTier": "C",
+    "disabledReason": "Endpoint returns HTML, not RSS/Atom"
   },
   {
     "sourceName": "MIT Technology Review",
@@ -197,7 +303,12 @@
     "credibilityTier": 2,
     "enabled": true,
     "pollingInterval": 30,
-    "category": "AI News"
+    "category": "AI News",
+    "organization": "MIT",
+    "aliases": [
+      "mit"
+    ],
+    "qualityTier": "B"
   },
   {
     "sourceName": "AWS Machine Learning Blog",
@@ -207,7 +318,14 @@
     "credibilityTier": 1,
     "enabled": true,
     "pollingInterval": 30,
-    "category": "AI Infrastructure"
+    "category": "AI Infrastructure",
+    "organization": "Amazon",
+    "aliases": [
+      "amazon",
+      "aws",
+      "bedrock"
+    ],
+    "qualityTier": "A"
   },
   {
     "sourceName": "Google Research Blog",
@@ -217,6 +335,237 @@
     "credibilityTier": 1,
     "enabled": true,
     "pollingInterval": 30,
+    "category": "AI Research",
+    "organization": "Google",
+    "aliases": [
+      "google",
+      "gemini",
+      "deepmind",
+      "gemma"
+    ],
+    "qualityTier": "A"
+  },
+  {
+    "sourceName": "NVIDIA Developer Blog",
+    "feedUrl": "https://developer.nvidia.com/blog/feed/",
+    "homepageUrl": "https://developer.nvidia.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "qualityTier": "A",
+    "organization": "NVIDIA",
+    "aliases": [
+      "nvidia",
+      "cuda",
+      "blackwell"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Infrastructure"
+  },
+  {
+    "sourceName": "Apple Machine Learning Research",
+    "feedUrl": "https://machinelearning.apple.com/rss.xml",
+    "homepageUrl": "https://machinelearning.apple.com",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "qualityTier": "C",
+    "organization": "Apple",
+    "aliases": [
+      "Apple"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
     "category": "AI Research"
+  },
+  {
+    "sourceName": "NVIDIA Newsroom",
+    "feedUrl": "https://nvidianews.nvidia.com/releases.xml",
+    "homepageUrl": "https://nvidianews.nvidia.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "qualityTier": "A",
+    "organization": "NVIDIA",
+    "aliases": [
+      "nvidia",
+      "cuda",
+      "blackwell"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Infrastructure"
+  },
+  {
+    "sourceName": "Google Research",
+    "feedUrl": "https://research.google/blog/rss/",
+    "homepageUrl": "https://research.google",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "qualityTier": "C",
+    "organization": "Google",
+    "aliases": [
+      "google",
+      "gemini",
+      "deepmind",
+      "gemma"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "Amazon Science",
+    "feedUrl": "https://www.amazon.science/index.rss",
+    "homepageUrl": "https://www.amazon.science",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "qualityTier": "C",
+    "organization": "Amazon",
+    "aliases": [
+      "amazon",
+      "aws",
+      "bedrock"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "Microsoft Azure AI",
+    "feedUrl": "https://azure.microsoft.com/en-us/blog/category/ai-machine-learning/feed/",
+    "homepageUrl": "https://azure.microsoft.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "qualityTier": "A",
+    "organization": "Microsoft",
+    "aliases": [
+      "microsoft",
+      "azure",
+      "copilot",
+      "phi"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Infrastructure"
+  },
+  {
+    "sourceName": "ML@CMU",
+    "feedUrl": "https://blog.ml.cmu.edu/feed/",
+    "homepageUrl": "https://blog.ml.cmu.edu",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "qualityTier": "C",
+    "organization": "Carnegie Mellon University",
+    "aliases": [
+      "Carnegie Mellon University"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "Simon Willison",
+    "feedUrl": "https://simonwillison.net/atom/everything/",
+    "homepageUrl": "https://simonwillison.net",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "qualityTier": "C",
+    "organization": "Simon Willison",
+    "aliases": [
+      "Simon Willison"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "WIRED AI",
+    "feedUrl": "https://www.wired.com/feed/tag/ai/latest/rss",
+    "homepageUrl": "https://www.wired.com",
+    "sourceType": "journalism",
+    "credibilityTier": 2,
+    "qualityTier": "B",
+    "organization": "Condé Nast",
+    "aliases": [],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI News"
+  },
+  {
+    "sourceName": "Sebastian Raschka",
+    "feedUrl": "https://magazine.sebastianraschka.com/feed",
+    "homepageUrl": "https://magazine.sebastianraschka.com",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "qualityTier": "C",
+    "organization": "Sebastian Raschka",
+    "aliases": [
+      "Sebastian Raschka"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "O’Reilly Radar",
+    "feedUrl": "https://www.oreilly.com/radar/feed/",
+    "homepageUrl": "https://www.oreilly.com",
+    "sourceType": "research",
+    "credibilityTier": 2,
+    "qualityTier": "C",
+    "organization": "O’Reilly Media",
+    "aliases": [
+      "O’Reilly Media"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Research"
+  },
+  {
+    "sourceName": "The Register AI",
+    "feedUrl": "https://www.theregister.com/software/ai_ml/headlines.atom",
+    "homepageUrl": "https://www.theregister.com",
+    "sourceType": "journalism",
+    "credibilityTier": 2,
+    "qualityTier": "B",
+    "organization": "The Register",
+    "aliases": [
+      "The Register"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI News"
+  },
+  {
+    "sourceName": "Databricks Blog",
+    "feedUrl": "https://www.databricks.com/feed",
+    "homepageUrl": "https://www.databricks.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "qualityTier": "A",
+    "organization": "Databricks",
+    "aliases": [
+      "Databricks"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Infrastructure"
+  },
+  {
+    "sourceName": "Google Cloud AI",
+    "feedUrl": "https://cloudblog.withgoogle.com/products/ai-machine-learning/rss/",
+    "homepageUrl": "https://cloudblog.withgoogle.com",
+    "sourceType": "primary",
+    "credibilityTier": 1,
+    "qualityTier": "A",
+    "organization": "Google",
+    "aliases": [
+      "google",
+      "gemini",
+      "deepmind",
+      "gemma"
+    ],
+    "enabled": true,
+    "pollingInterval": 60,
+    "category": "AI Infrastructure"
   }
 ]

@@ -1,187 +1,38 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchEvents, fetchStatus, fetchThemes, fetchEventsSince, triggerRefresh } from '../utils/api';
-import EventCard from './EventCard';
-import EventDetailModal from './EventDetailModal';
-import Filters from './Filters';
-import SystemStatus from './SystemStatus';
+import { fetchEvents, fetchStatus, fetchThemes, fetchEventsSince, fetchSources } from '../utils/api';
+import { getWatchlist, saveWatchlist, getLastVisit, saveLastVisit } from '../utils/storage';
+import { parseTimestamp } from '../utils/timeUtils';
+
+
 import TopNav from './TopNav';
-import { formatDistanceToNow } from '../utils/timeUtils';
-import { getWatchlist, saveWatchlist, WATCHLIST_TOPICS, getLastVisit, saveLastVisit } from '../utils/storage';
-import { eventMatchesWatchlist } from '../utils/eventIntelligence';
+import SituationBand from './SituationBand';
+import AnalystBrief from './AnalystBrief';
+import TopEvents from './TopEvents';
+import MomentumBoard from './MomentumBoard';
+import Filters from './Filters';
+import EventCard from './EventCard';
+import SystemStatus from './SystemStatus';
+import EventDetailModal from './EventDetailModal';
+import BootLoader from './BootLoader';
+import Reveal from './Reveal';
+import ManageFollowing from './ManageFollowing';
+
 
 const PAGE_SIZE = 50;
 const POLL_INTERVAL = 60000;
+const BOOT_HARD_CAP_MS = 2600;
 
 const DEFAULT_FILTERS = {
   category: 'All',
   timeframe: '24h',
   search: '',
-  sort: 'importance',
+  sort: 'latest',
+  source: '',
   onlyHighConfidence: false,
   onlyImportant: false,
   forYou: false,
 };
 
-function HeroPanel({ status, storyCount, lastUpdated }) {
-  return (
-    <section className="hero-panel glass-panel">
-      <div className="hero-copy">
-        <span className="hero-eyebrow">AI INTELLIGENCE</span>
-        <h1>The AI world, without the noise.</h1>
-        <p>Important developments from the sources that matter — filtered, clustered and summarized for you.</p>
-      </div>
-
-      <div className="hero-details">
-        <div className="hero-detail-card">
-          <span className="hero-detail-label">Live monitoring</span>
-          <strong>{status ? `${status.sources.total} source${status.sources.total === 1 ? '' : 's'}` : 'Loading sources...'}</strong>
-        </div>
-        <div className="hero-detail-card">
-          <span className="hero-detail-label">Latest update</span>
-          <strong>{lastUpdated ? formatDistanceToNow(lastUpdated) : 'Checking status...'}</strong>
-        </div>
-        <div className="hero-detail-card">
-          <span className="hero-detail-label">Active stories</span>
-          <strong>{storyCount}</strong>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FeaturedSection({ events, onSelect }) {
-  if (!events || events.length === 0) return null;
-
-  const main = events[0];
-  const side = events.slice(1, 4);
-
-  return (
-    <section className="featured-section">
-      <div className="featured-header">
-        <div>
-          <p className="eyebrow">What matters now</p>
-          <h2>Top AI events shaping the day.</h2>
-        </div>
-      </div>
-
-      <div className="featured-grid">
-        <article
-          className="featured-card featured-card-main glass-panel"
-          onClick={() => onSelect(main)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={e => e.key === 'Enter' && onSelect(main)}
-          aria-label={main.title}
-        >
-          <div className="featured-meta">
-            <span className="featured-category">{main.category || 'AI News'}</span>
-            <span className="featured-time">Updated {formatDistanceToNow(main.updatedAt || main.discoveredAt)}</span>
-          </div>
-          <h3>{main.title}</h3>
-          {main.summary && <p>{main.summary}</p>}
-          {main.whyItMatters && (
-            <div className="featured-matters">
-              <span>Why it matters</span>
-              <p>{main.whyItMatters}</p>
-            </div>
-          )}
-          <div className="featured-footer">
-            <span>{main.sources?.length || 0} source{(main.sources?.length || 0) !== 1 ? 's' : ''}</span>
-            <span>{main.confidenceLabel || 'Medium'} confidence</span>
-          </div>
-        </article>
-
-        <div className="featured-card-stack">
-          {side.map(event => (
-            <article
-              key={event.id}
-              className="featured-card featured-card-small glass-panel"
-              onClick={() => onSelect(event)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={e => e.key === 'Enter' && onSelect(event)}
-              aria-label={event.title}
-            >
-              <div className="featured-meta">
-                <span className="featured-category">{event.category || 'AI News'}</span>
-                <span className="featured-time">{formatDistanceToNow(event.updatedAt || event.discoveredAt)}</span>
-              </div>
-              <h4>{event.title}</h4>
-              {event.summary && <p>{event.summary}</p>}
-              <div className="featured-footer">
-                <span>{event.sources?.length || 0} sources</span>
-                <span>{event.importanceScore ? `${Math.round(event.importanceScore)}% importance` : 'Scoring…'}</span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function ThemesSection({ themes, activeCategory, onSelectTheme }) {
-  if (!themes || themes.length === 0) return null;
-
-  return (
-    <section className="trending-section">
-      <div className="section-heading-row">
-        <p className="eyebrow">What’s moving</p>
-        <h2>Current AI themes in the feed.</h2>
-      </div>
-      <div className="trending-grid">
-        {themes.slice(0, 5).map(theme => (
-          <button
-            key={theme.category}
-            type="button"
-            className={`trend-card glass-panel${activeCategory === theme.category ? ' active' : ''}`}
-            onClick={() => onSelectTheme(theme.category)}
-            aria-pressed={activeCategory === theme.category}
-          >
-            <span className="trend-card-label">{theme.category}</span>
-            <strong>{theme.count}</strong>
-            <small>
-              {theme.count === 1 ? 'story' : 'stories'}
-              {theme.latestUpdatedAt ? ` · ${formatDistanceToNow(theme.latestUpdatedAt)}` : ''}
-            </small>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function WatchlistSection({ watchlist, onToggle, onClear }) {
-  return (
-    <section className="watchlist-panel glass-panel">
-      <div className="watchlist-heading">
-        <div>
-          <p className="eyebrow">Watchlist</p>
-          <h3>Follow the topics that matter to you.</h3>
-        </div>
-        {watchlist.length > 0 && (
-          <button type="button" className="btn-icon" onClick={onClear}>Clear</button>
-        )}
-      </div>
-      <div className="topic-chips">
-        {WATCHLIST_TOPICS.map(topic => {
-          const active = watchlist.includes(topic.id);
-          return (
-            <button
-              key={topic.id}
-              type="button"
-              className={`topic-pill${active ? ' active' : ''}`}
-              aria-pressed={active}
-              onClick={() => onToggle(topic.id)}
-            >
-              {active ? '★' : '☆'} {topic.label}
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
 
 function dedupeById(list) {
   const seen = new Set();
@@ -192,29 +43,76 @@ function dedupeById(list) {
   });
 }
 
-export default function Dashboard({ theme, themePreference, onThemeChange }) {
+function Footer() {
+  return (
+    <footer className="foot">
+      <div className="foot-in">
+        <span>AI News Aggregator Dashboard</span>
+        <span className="grow" aria-hidden="true" />
+        <span>V.RUSHANTH RAYUDU</span>
+        <a href="https://github.com/Rushanth-Rayudu" target="_blank" rel="noopener noreferrer">
+          GitHub ↗
+        </a>
+      </div>
+    </footer>
+  );
+}
+
+function FeedSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div className="card card-skel" key={index} aria-hidden="true">
+          <div className="card-top">
+            <span className="skel h7 w20" />
+            <span className="skel h7 w40 skel-end" />
+          </div>
+          <span className="skel w85" />
+          <span className="skel w60" />
+          <span className="skel h7 w40" />
+          <div className="card-meta">
+            <span className="skel h7 w40" />
+            <span className="skel h7 w20 skel-end" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+export default function Dashboard({ theme, onThemeChange }) {
   const [events, setEvents] = useState([]);
   const [status, setStatus] = useState(null);
+  const [sources, setSources] = useState(null);
+  const [sourcesError, setSourcesError] = useState(false);
+  const [statusError, setStatusError] = useState(false);
+  const requestVersion = useRef(0);
+  const feedCheckedAt = useRef(Date.now());
   const [themes, setThemes] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [manageFollowing, setManageFollowing] = useState(false);
+  const [featuredEvents, setFeaturedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showScroll, setShowScroll] = useState(false);
-  const [showIntroOverlay, setShowIntroOverlay] = useState(true);
+  const [bootDone, setBootDone] = useState(false);
+  const [bootMounted, setBootMounted] = useState(true);
   const [pendingNewEvents, setPendingNewEvents] = useState([]);
   const [visitInfo, setVisitInfo] = useState(null);
   const [watchlist, setWatchlist] = useState(() => getWatchlist());
   const [filters, setFilters] = useState(() => {
     if (typeof window === 'undefined') return DEFAULT_FILTERS;
+    let merged = DEFAULT_FILTERS;
     try {
       const saved = JSON.parse(localStorage.getItem('ai-intelligence-filters') || 'null');
-      return saved ? { ...DEFAULT_FILTERS, ...saved } : DEFAULT_FILTERS;
+      if (saved) merged = { ...DEFAULT_FILTERS, ...saved };
     } catch {
-      return DEFAULT_FILTERS;
+      merged = DEFAULT_FILTERS;
     }
+    merged = { ...merged, onlyHighConfidence: false, onlyImportant: false };
+    return merged;
   });
 
   const eventsRef = useRef(events);
@@ -223,24 +121,33 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
   }, [events]);
   const initialVisitRef = useRef(false);
 
+  /* Boot overlay: dismissed the moment real data is ready, hard-capped so it
+     can never trap the page. */
   useEffect(() => {
-    const timer = setTimeout(() => setShowIntroOverlay(false), 3000);
-    return () => clearTimeout(timer);
+    const cap = setTimeout(() => setBootDone(true), BOOT_HARD_CAP_MS);
+    return () => clearTimeout(cap);
   }, []);
+  useEffect(() => {
+    if (!loading) setBootDone(true);
+  }, [loading]);
+  useEffect(() => {
+    if (!bootDone) return undefined;
+    const t = setTimeout(() => setBootMounted(false), 340);
+    return () => clearTimeout(t);
+  }, [bootDone]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('ai-intelligence-filters', JSON.stringify(filters));
+      try { localStorage.setItem('ai-intelligence-filters', JSON.stringify(filters)); } catch { /* session remains usable */ }
     }
   }, [filters]);
 
   useEffect(() => {
     saveWatchlist(watchlist);
   }, [watchlist]);
-
   const lastUpdated = useMemo(() => {
     const times = events
-      .map(evt => new Date(evt.updatedAt || evt.discoveredAt))
+      .map(evt => parseTimestamp(evt.updatedAt || evt.discoveredAt))
       .filter(date => !Number.isNaN(date.getTime()));
     if (!times.length) return null;
     return new Date(Math.max(...times.map(date => date.getTime()))).toISOString();
@@ -250,40 +157,51 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
   useEffect(() => {
     loadStatus();
     loadThemes();
+    loadSources();
+    fetchEvents({ limit: 4, timeframe: '7d', sort: 'importance' }).then(setFeaturedEvents).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load/reload the feed when primary server-side filters change
   useEffect(() => {
-    loadEvents({ page: 0, append: false });
+    requestVersion.current++;
+    setPendingNewEvents([]);
+    const timer = setTimeout(() => loadEvents({ page: 0, append: false }), 250);
+    return () => { clearTimeout(timer); };
     // loadEvents is intentionally re-created each render; the data deps below
     // fully describe when a reload is required.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.sort, filters.category, filters.timeframe]);
+  }, [filters.sort, filters.category, filters.timeframe, filters.search, filters.source, filters.forYou, filters.onlyImportant, filters.onlyHighConfidence, watchlist]);
 
   // Poll for fresh stories without reordering the page (see pollForNewEvents)
   useEffect(() => {
     const interval = setInterval(() => pollForNewEvents(), POLL_INTERVAL);
     return () => clearInterval(interval);
-    // pollForNewEvents reads only refs + the filters listed below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.category, filters.timeframe, filters.sort]);
+  }, [filters.category, filters.timeframe, filters.sort, filters.search, filters.source, filters.forYou, filters.onlyImportant, filters.onlyHighConfidence, watchlist]);
 
   useEffect(() => {
     const handleScroll = () => setShowScroll(window.scrollY > 320);
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
 
   function applyServerFilters(params) {
     if (filters.category && filters.category !== 'All') params.category = filters.category;
     if (filters.timeframe) params.timeframe = filters.timeframe;
+    if(filters.search.trim()) params.q=filters.search.trim();
+    if(filters.source) params.source=filters.source;
+    if(filters.onlyImportant) params.onlyImportant='true';
+    if(filters.onlyHighConfidence) params.onlyHighConfidence='true';
+    if(filters.forYou) params.following=watchlist.join(',');
     return params;
   }
 
   async function loadEvents({ page = 0, append = false } = {}) {
+    const version = append ? requestVersion.current : ++requestVersion.current;
     try {
       if (!append) setLoading(true);
       // Fast initial page (50) + server-side offset pagination. Server applies
@@ -294,7 +212,9 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
         offset: page * PAGE_SIZE,
         sort: filters.sort,
       }));
+      if(version !== requestVersion.current) return;
       setEvents(prev => (append ? dedupeById([...prev, ...data]) : data));
+      if (!append) feedCheckedAt.current = Date.now();
       setHasMore(data.length === PAGE_SIZE);
       setError(null);
 
@@ -305,15 +225,16 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
         computeVisitInfo();
       }
     } catch {
-      setError('Unable to refresh right now. Your existing stories are still available.');
+      if(version === requestVersion.current) setError('Unable to load records. Please retry.');
     } finally {
-      if (!append) setLoading(false);
+      if (!append && version === requestVersion.current) setLoading(false);
     }
   }
 
   async function loadMore() {
     if (loadingMore) return;
     setLoadingMore(true);
+    const version=requestVersion.current;
     try {
       const offset = eventsRef.current.length;
       const data = await fetchEvents(applyServerFilters({
@@ -321,16 +242,16 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
         offset,
         sort: filters.sort,
       }));
+      if(version !== requestVersion.current) return;
       setEvents(prev => dedupeById([...prev, ...data]));
       setHasMore(data.length === PAGE_SIZE);
       setError(null);
     } catch {
-      setError('Unable to load more right now.');
+      if(version === requestVersion.current) setError('Unable to load more right now. Use Load more to retry.');
     } finally {
       setLoadingMore(false);
     }
   }
-
   async function computeVisitInfo() {
     try {
       const lastVisit = getLastVisit();
@@ -356,15 +277,17 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
   }
 
   async function pollForNewEvents() {
+    const version = requestVersion.current;
     try {
       const data = await fetchEvents(applyServerFilters({
         limit: PAGE_SIZE,
         sort: 'latest',
       }));
       const currentIds = new Set(eventsRef.current.map(e => e.id));
-      const fresh = data.filter(e => !currentIds.has(e.id));
+      if (version !== requestVersion.current) return;
+      const fresh = data.filter(e => !currentIds.has(e.id) && parseTimestamp(e.discoveredAt).getTime() > feedCheckedAt.current);
       if (fresh.length > 0) {
-        setPendingNewEvents(prev => dedupeById([...prev, ...fresh]));
+        setPendingNewEvents(fresh);
       }
     } catch {
       // Best-effort polling — never disrupt the page for a transient failure.
@@ -392,12 +315,19 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
     setPendingNewEvents([]);
   }
 
+  async function loadSources() {
+    setSourcesError(false);
+    try { setSources(await fetchSources()); }
+    catch { setSourcesError(true); }
+  }
+
   async function loadStatus() {
     try {
       const data = await fetchStatus();
       setStatus(data);
-    } catch (e) {
-      console.warn('Status fetch failed', e);
+      setStatusError(false);
+    } catch {
+      setStatusError(true);
     }
   }
 
@@ -405,19 +335,20 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
     try {
       const data = await fetchThemes();
       setThemes(data);
-    } catch (e) {
-      console.warn('Themes fetch failed', e);
+    } catch {
+      setThemes([]);
     }
   }
 
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      await triggerRefresh();
+
       await loadEvents({ page: 0, append: false });
       await loadStatus();
       await loadThemes();
-      setError(null);
+      await fetchEvents({ limit: 4, timeframe: "7d", sort: "importance" }).then(setFeaturedEvents);
+      await loadSources();
     } catch {
       setError('Unable to refresh right now. Your existing stories are still available.');
     } finally {
@@ -431,57 +362,24 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
 
   function clearWatchlist() {
     setWatchlist([]);
-    setFilters(prev => ({ ...prev, forYou: false }));
   }
 
   function selectTheme(category) {
     setFilters(prev => ({ ...prev, category: prev.category === category ? 'All' : category }));
   }
+  const filteredEvents = events;
 
-  const filteredEvents = useMemo(() => {
-    let result = [...events];
-
-    if (filters.category && filters.category !== 'All') {
-      result = result.filter(e => e.category === filters.category);
-    }
-
-    if (filters.onlyHighConfidence) {
-      result = result.filter(e => (e.confidenceLabel || '').toLowerCase() === 'high');
-    }
-
-    if (filters.onlyImportant) {
-      result = result.filter(e => (e.importanceScore || 0) >= 70);
-    }
-
-    if (filters.forYou) {
-      result = watchlist.length > 0
-        ? result.filter(e => eventMatchesWatchlist(watchlist, e))
-        : [];
-    }
-
-    // NOTE: timeframe (6h/24h/7d) is applied server-side via ?timeframe= to keep
-    // SQL and client semantics in sync; do not re-filter by timeframe here (a
-    // client-side duplicate filter incorrectly dropped events near the window edge).
-
-    if (filters.search && filters.search.trim()) {
-      const query = filters.search.trim().toLowerCase();
-      result = result.filter(e =>
-        (e.title || '').toLowerCase().includes(query) ||
-        (e.summary || '').toLowerCase().includes(query) ||
-        (e.category || '').toLowerCase().includes(query)
-      );
-    }
-
-    return result;
-  }, [events, filters, watchlist]);
-
-  const featuredEvents = filteredEvents.slice(0, 4);
-
-  const forYouEmpty = watchlist.length === 0;
   const showForYouEmptyState = filters.forYou && watchlist.length === 0;
+  const hasActiveFilters = filters.category !== 'All'
+    || filters.timeframe !== '24h'
+    || Boolean(filters.search)
+    || Boolean(filters.source)
+    || filters.onlyHighConfidence
+    || filters.onlyImportant
+    || filters.forYou;
 
   return (
-    <div className="app-shell">
+    <div>
       <TopNav
         activeCategory={filters.category}
         onNavigate={category => setFilters(prev => ({ ...prev, category }))}
@@ -489,143 +387,133 @@ export default function Dashboard({ theme, themePreference, onThemeChange }) {
         refreshing={refreshing}
         status={status}
         theme={theme}
-        themePreference={themePreference}
+        themePreference={theme}
         onThemeChange={onThemeChange}
       />
 
-      {showIntroOverlay && (
-        <div className="startup-overlay" aria-hidden="true">
-          <div className="startup-center glass-panel">
-            <div className="startup-brand">AI INTELLIGENCE</div>
-            <div className="startup-title">Synchronizing your intelligence stream</div>
-            <div className="startup-loader">
-              <div className="loader-ring" />
-              <div className="loader-text">Initializing the future...</div>
-            </div>
-          </div>
-        </div>
-      )}
+      {bootMounted && <BootLoader done={bootDone} />}
 
-      <main className="main-content">
-        <div className="background-atmosphere" aria-hidden="true" />
-        <HeroPanel status={status} storyCount={filteredEvents.length} lastUpdated={lastUpdated} />
+      <main className="mw">
+        <SituationBand status={status} storyCount={filteredEvents.length} lastUpdated={lastUpdated} />
 
         {visitInfo && visitInfo.count > 0 && (
-          <section className="visit-banner glass-panel">
-            <div className="visit-banner-head">
-              <div>
-                <p className="eyebrow">Since your last visit</p>
-                <h3>
-                  {visitInfo.count} new development{visitInfo.count !== 1 ? 's' : ''}
-                </h3>
-              </div>
-              <button type="button" className="btn-icon" onClick={markVisitSeen}>Dismiss</button>
-            </div>
-            {visitInfo.events.length > 0 && (
-              <div className="visit-items">
-                {visitInfo.events.map(evt => (
-                  <button
-                    key={evt.id}
-                    type="button"
-                    className="visit-item"
-                    onClick={() => setSelected(evt)}
-                  >
-                    <span className="visit-item-importance">
-                      {Math.round(Math.min(100, evt.importanceScore || 0))}%
-                    </span>
-                    <span className="visit-item-title">{evt.title}</span>
-                    <span className="visit-item-time">{formatDistanceToNow(evt.discoveredAt)}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </section>
+          <AnalystBrief info={visitInfo} onOpen={setSelected} onDismiss={markVisitSeen} />
         )}
 
         {error && (
-          <div className="status-banner" role="alert">
-            <div className="status-banner-icon">⚠</div>
+          <div className="alert" role="alert">
+            <span aria-hidden="true">⚠</span>
             <div>
               <strong>Something interrupted the signal.</strong>
-              <p>{error}</p>
+              <p>{error}</p><button type="button" className="btn" onClick={() => loadEvents()}>Retry</button>
             </div>
           </div>
         )}
 
-        <FeaturedSection events={featuredEvents} onSelect={setSelected} />
-        <ThemesSection themes={themes} activeCategory={filters.category} onSelectTheme={selectTheme} />
+        <TopEvents events={featuredEvents} onSelect={setSelected} />
 
-        <Filters filters={filters} onChange={setFilters} watchlistEmpty={forYouEmpty} />
-        <WatchlistSection watchlist={watchlist} onToggle={toggleTopic} onClear={clearWatchlist} />
+        <MomentumBoard themes={themes} activeCategory={filters.category} onSelectTheme={selectTheme} />
 
-        <SystemStatus status={status} refreshing={refreshing} onRefresh={handleRefresh} />
-
-        {pendingNewEvents.length > 0 && (
-          <div className="new-stories-banner" role="status">
-            <button type="button" className="new-stories-button" onClick={applyNewEvents}>
-              ↑ {pendingNewEvents.length} new development{pendingNewEvents.length !== 1 ? 's' : ''}
-            </button>
-            <span className="new-stories-note">Click to add to your feed</span>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="events-grid animate" aria-live="polite">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div className="event-card event-skeleton" key={index} style={{ '--index': index }}>
-                <div className="skeleton-line short" />
-                <div className="skeleton-line medium" />
-                <div className="skeleton-line" />
-                <div className="skeleton-line small" />
+        <section className="band" id="feed" aria-label="Intelligence feed">
+          <Reveal>
+            <header className="band-head">
+              <span className="band-no">03</span>
+              <div className="band-title">
+                <h2>Intelligence feed</h2>
+                <span className="m-label m-sub">The full record · filter and scan</span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="events-grid animate" aria-live="polite">
-            {filteredEvents.length === 0 ? (
-              showForYouEmptyState ? (
-                <div className="events-empty glass-panel">
-                  <h3>Your For You feed is empty.</h3>
-                  <p>Follow topics in the Watchlist above to see tailored stories.</p>
-                </div>
-              ) : (
-                <div className="events-empty glass-panel">
-                  <h3>Waiting for the next signal.</h3>
-                  <p>The intelligence feed is monitoring the sources that matter.</p>
-                  <button type="button" className="btn-primary" onClick={handleRefresh}>Refresh</button>
-                </div>
-              )
-            ) : (
-              filteredEvents.map((event, idx) => (
-                <EventCard key={event.id} index={idx} event={event} onClick={setSelected} />
-              ))
-            )}
-          </div>
-        )}
+              <div className="band-aside">
+                <span className="m-label">Press / to search</span>
+              </div>
+            </header>
+          </Reveal>
 
-        {!loading && filteredEvents.length > 0 && hasMore && (
-          <div className="load-more-wrap">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={loadMore}
-              disabled={loadingMore}
-            >
-              {loadingMore ? 'Loading…' : 'Load more'}
-            </button>
-          </div>
-        )}
+          <Reveal delay={60}>
+            <Filters
+              sources={sources || []}
+              filters={filters}
+              onChange={setFilters}
+              onReset={() => setFilters(DEFAULT_FILTERS)}
+              watchlist={watchlist}
+              onManageFollowing={() => setManageFollowing(true)}
+            />
+
+            {pendingNewEvents.length > 0 && (
+              <div className="nsb" role="status">
+                <button type="button" className="btn btn-acc" onClick={applyNewEvents}>
+                  ↑ {pendingNewEvents.length} new signal{pendingNewEvents.length !== 1 ? 's' : ''}
+                </button>
+                <span className="nsb-note">Add to the current feed without losing your place</span>
+              </div>
+            )}
+
+            <div className="feed-head">
+              <span className="m-label">Live records</span>
+              <span className="feed-count">
+                <b>{filteredEvents.length}</b> SHOWN{hasMore ? ' · MORE AVAILABLE' : ''}
+              </span>
+            </div>
+
+            <div className="feed" aria-live="polite" aria-busy={loading}>
+              {loading ? (
+                <FeedSkeleton />
+              ) : filteredEvents.length === 0 ? (
+                showForYouEmptyState ? (
+                  <div className="feed-empty">
+                    <h3>You're not following any interests yet.</h3>
+                    <p>Choose companies or topics to see intelligence matching your interests.</p>
+                    <button className="btn" onClick={() => setManageFollowing(true)}>Manage Following</button>
+                  </div>
+                ) : hasActiveFilters ? (
+                  <div className="feed-empty">
+                    <h3>No intelligence matches these filters.</h3>
+                    <p>Loosen the current constraints or return to the full record.</p>
+                    <button type="button" className="btn" onClick={() => setFilters(DEFAULT_FILTERS)}>Clear filters</button>
+                  </div>
+                ) : (
+                  <div className="feed-empty">
+                    <h3>Waiting for the next signal.</h3>
+                    <p>The intelligence feed is monitoring the sources that matter.</p>
+                    <button type="button" className="btn" onClick={handleRefresh}>Refresh</button>
+                  </div>
+                )
+              ) : (
+                filteredEvents.map((event, idx) => (
+                  <EventCard key={event.id} index={idx} event={event} onClick={setSelected} />
+                ))
+              )}
+            </div>
+
+            {!loading && filteredEvents.length > 0 && hasMore && (
+              <div className="loadmore">
+                <button type="button" className="btn" onClick={loadMore} disabled={loadingMore}>
+                  {loadingMore ? 'Loading…' : 'Load more records ↓'}
+                </button>
+              </div>
+            )}
+          </Reveal>
+        </section>
+
+        <SystemStatus status={status} statusError={statusError} sources={sources} sourcesError={sourcesError} onRetrySources={loadSources} refreshing={refreshing} onRefresh={handleRefresh} />
       </main>
 
-      {selected && <EventDetailModal event={selected} onClose={() => setSelected(null)} />}
+      {selected && <EventDetailModal event={selected} watchlist={watchlist} onToggleTopic={toggleTopic} onClose={() => setSelected(null)} />}
+      {manageFollowing && <ManageFollowing watchlist={watchlist} onToggle={toggleTopic} onClear={clearWatchlist} onClose={() => setManageFollowing(false)} />}
+
       <button
         type="button"
-        className={`scroll-top-button${showScroll ? ' visible' : ''}`}
+        className={`st${showScroll ? ' on' : ''}`}
+        hidden={!showScroll}
         onClick={scrollToTop}
         aria-label="Scroll back to top"
       >
         ↑
       </button>
+
+      <Footer />
+
     </div>
+
+
   );
 }
