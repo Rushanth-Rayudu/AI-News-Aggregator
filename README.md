@@ -101,10 +101,10 @@ shared/
 
 Use Node.js 22.12+ or a newer compatible LTS release, npm, and Git. SQLite's native dependency may require build tools if a prebuilt binary is unavailable.
 
-The configured remote still uses the legacy repository slug. Clone it into the new local folder name:
+Clone the repository:
 
 ```powershell
-git clone https://github.com/Rushanth-Rayudu/ai-intelligence-dashboard.git AI-News-Aggregator
+git clone https://github.com/Rushanth-Rayudu/AI-News-Aggregator.git
 Set-Location AI-News-Aggregator
 Copy-Item .env.example .env
 npm --prefix server install
@@ -213,7 +213,7 @@ GitHub Actions uses the workflow cron expressions, not the backend's digest time
 
 ### Naming and compatibility
 
-The desired repository name is `AI-News-Aggregator`; the configured remote is currently `https://github.com/Rushanth-Rayudu/ai-intelligence-dashboard.git`. After the owner renames it in repository Settings, update the clone URL here and the local remote explicitly.
+The GitHub repository is now `AI-News-Aggregator`, and the local Git remote is `https://github.com/Rushanth-Rayudu/AI-News-Aggregator.git`.
 
 Existing checkout folders may retain `ai-intelligence-dashboard` until closed and renamed safely. Keep working deployment hostnames, database resources, environment-variable names, and route aliases unchanged. Browser keys `ai-intelligence-filters`, `ai-intelligence-watchlist`, and `ai-intelligence-last-visit` preserve existing preferences.
 
