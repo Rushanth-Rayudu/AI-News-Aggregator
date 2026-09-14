@@ -26,7 +26,7 @@ function requireInternalSecret(headerName, envVarName) {
 
 router.get('/', (req, res) => {
     res.json({
-        name: "AI Intelligence Dashboard API",
+        name: "AI News Aggregator API",
         version: "1.0.0",
         status: "online",
         endpoints: {

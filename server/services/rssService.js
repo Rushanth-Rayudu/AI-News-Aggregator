@@ -5,7 +5,7 @@ const { decodeFeedText } = require('./textNormalization');
 const parser = new Parser({
     timeout: 10000,
     headers: {
-        'User-Agent': 'AI-Intelligence-Dashboard/1.0',
+        'User-Agent': 'AI-News-Aggregator/1.0',
     }
 });
 

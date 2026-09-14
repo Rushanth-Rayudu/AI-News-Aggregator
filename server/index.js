@@ -77,7 +77,7 @@ function getLandingHtml(port) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Intelligence Engine & API Portal</title>
+    <title>AI News Aggregator — API Portal</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #090d16; color: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
@@ -109,7 +109,7 @@ function getLandingHtml(port) {
             <div class="title-group">
                 <div class="icon">AI</div>
                 <div>
-                    <h1>AI Intelligence Engine</h1>
+                    <h1>AI News Aggregator</h1>
                     <span style="color: #64748b; font-size: 13px;">Backend API & Ingestion Service</span>
                 </div>
             </div>
@@ -118,7 +118,7 @@ function getLandingHtml(port) {
             </div>
         </div>
         <p class="desc">
-            The backend server is running and ready. It actively monitors 15+ RSS feeds every 10 minutes, deduplicates news, scores credibility, and runs Gemini AI summarization.
+            AI News Aggregator provides RSS/Atom ingestion, event clustering, source evaluation, and optional Gemini analysis. Check system health for current source and configuration status.
         </p>
         <div class="grid">
             <a href="/api/status" target="_blank" class="endpoint-card">

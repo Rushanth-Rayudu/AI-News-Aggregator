@@ -5,7 +5,7 @@ export default function NotFound() {
     <main className="nf">
       <div>
         <div className="nf-no" aria-hidden="true">404</div>
-        <p className="m-label">Signal unavailable</p>
+        <p className="m-label">AI News Aggregator / Signal unavailable</p>
         <h1>Page not found.</h1>
         <p>The address does not map to an intelligence view.</p>
         <div className="nf-actions">

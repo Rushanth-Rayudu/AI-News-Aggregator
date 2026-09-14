@@ -1,16 +1,18 @@
-# React + Vite
+# AI News Aggregator frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React and Vite frontend for **AI-News-Aggregator**. See the [project README](../README.md) for architecture, environment variables, backend setup, and deployment.
 
-Currently, two official plugins are available:
+From this directory:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```powershell
+npm install
+npm run dev
+npm run lint
+npm run build
+```
 
-## React Compiler
+The development server normally uses port 5178. `/home` is the landing page and `/news` is the application. Legacy dashboard aliases redirect to `/news`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+API calls default to `/api`, proxied locally to port 8000. For separate hosting, set `VITE_API_BASE_URL` (including `/api`) in the frontend build environment. Local browser overrides belong in `client/.env.local`, not the parent backend `.env`. Never expose server secrets through `VITE_*` variables.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+The existing Light, Dark, and SYS modes, responsive layout, and reduced-motion behavior are shared across the product.

@@ -1,5 +1,5 @@
 {
-  "name": "client",
+  "name": "ai-news-aggregator-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -19,5 +19,6 @@
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
     "vite": "^8.2.0"
-  }
+  },
+  "description": "React frontend for AI News Aggregator."
 }
