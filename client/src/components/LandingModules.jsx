@@ -27,7 +27,7 @@ export function TrackingIndex() {
 export function FeedComparison() {
   return <Reveal className="feed-comparison">
     <div><span className="m-label">A conventional article feed</span><ul><li>Repeated headlines</li><li>Context spread across tabs</li><li>Significance left to the reader</li></ul></div>
-    <div><span className="m-label">AI News Aggregator</span><ul><li>Related coverage in one event</li><li>Sources and evidence together</li><li>Summary and significance in view</li></ul></div>
+    <div><span className="m-label"><span className="product-name">AI News Aggregator</span></span><ul><li>Related coverage in one event</li><li>Sources and evidence together</li><li>Summary and significance in view</li></ul></div>
   </Reveal>;
 }
 

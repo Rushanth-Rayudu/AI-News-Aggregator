@@ -1482,3 +1482,6 @@ html[data-theme='sys'] .sys-boot { display:none; }
   .brief-item { width: 100%; min-width: 0; }
   .brief-item .t { min-width: 0; }
 }
+
+/* Preserve the official product capitalization inside uppercase labels. */
+.product-name { text-transform: none; }

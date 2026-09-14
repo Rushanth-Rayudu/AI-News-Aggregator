@@ -236,7 +236,7 @@ function Hero({ status }) {
 
       <div className="hero-in">
         <Reveal as="div" className="hero-kicker">
-          <span className="m-label">AI News Aggregator / Live feed</span>
+          <span className="m-label"><span className="product-name">AI News Aggregator</span> / Live feed</span>
           <span className="hero-chip">
             <span className="dot dot-live" aria-hidden="true" />
             {Number.isFinite(healthy) && Number.isFinite(total)
@@ -565,7 +565,7 @@ function LandingFooter() {
   return (
     <footer className="lfoot">
       <div className="lfoot-in">
-        <span>AI News Aggregator</span>
+        <span className="product-name">AI News Aggregator</span>
         <span className="m-label">The AI world, without the noise</span>
         <span className="grow" aria-hidden="true" />
         <span>V.RUSHANTH RAYUDU</span>

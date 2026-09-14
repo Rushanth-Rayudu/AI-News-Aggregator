@@ -10,9 +10,9 @@ const THEME_VALUES = ['sys', 'light', 'dark']
 const THEME_COLORS = { sys: '#000000', light: '#f4f3ee', dark: '#0b0e13' }
 
 const TITLES = {
-  home: 'AI News Aggregator — The AI World, Without the Noise',
-  news: 'AI News Aggregator — Live Intelligence',
-  notFound: 'AI News Aggregator — Signal Unavailable',
+  home: 'Home | AI News Aggregator',
+  news: 'News | AI News Aggregator',
+  notFound: 'Page not found | AI News Aggregator',
 }
 
 const DESCRIPTIONS = {

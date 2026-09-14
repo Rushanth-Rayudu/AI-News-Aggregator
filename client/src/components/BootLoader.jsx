@@ -26,7 +26,7 @@ export default function BootLoader({ done }) {
   return (
     <div className={`boot${done ? ' done' : ''}`} aria-hidden="true">
       <div className="boot-inner">
-        <div className="boot-brand"><i />AI NEWS AGGREGATOR</div>
+        <div className="boot-brand"><i />AI News Aggregator</div>
         <div className="boot-sub">SIGNAL ACQUISITION</div>
         <div className="boot-steps">
           {STEPS.map((label, i) => (

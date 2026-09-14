@@ -47,7 +47,7 @@ function Footer() {
   return (
     <footer className="foot">
       <div className="foot-in">
-        <span>AI News Aggregator Dashboard</span>
+        <span className="product-name">AI News Aggregator</span>
         <span className="grow" aria-hidden="true" />
         <span>V.RUSHANTH RAYUDU</span>
         <a href="https://github.com/Rushanth-Rayudu" target="_blank" rel="noopener noreferrer">
