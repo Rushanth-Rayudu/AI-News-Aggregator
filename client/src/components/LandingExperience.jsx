@@ -18,7 +18,7 @@ export default function LandingExperience({ children }) {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const finish = () => setIntro(false);
     const change = () => { if (media.matches) finish(); };
-    const timer = setTimeout(finish, 2100);
+    const timer = setTimeout(finish, 1100);
     media.addEventListener('change', change);
     return () => { clearTimeout(timer); media.removeEventListener('change', change); };
   }, [intro]);

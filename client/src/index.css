@@ -514,6 +514,7 @@ h1, h2, h3, h4, p { margin: 0; }
   grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
   border: 1px solid var(--line);
 }
+.te-dossier { appearance:none; border:0; padding:0; background:none; color:inherit; font:inherit; text-align:inherit; cursor:pointer; }
 .te-main {
   min-width: 0;
   display: flex; flex-direction: column;
@@ -550,7 +551,7 @@ h1, h2, h3, h4, p { margin: 0; }
   opacity: 0; transform: translateX(-6px);
   transition: opacity var(--t-med) ease, transform var(--t-med) var(--ease);
 }
-.te-main:hover .te-open, .te-main:focus-visible .te-open { opacity: 1; transform: none; }
+.te-main:hover .te-open, .te-main:focus-within .te-open { opacity: 1; transform: none; }
 
 .te-side { display: flex; flex-direction: column; min-width: 0; }
 .te-item {
@@ -1485,3 +1486,20 @@ html[data-theme='sys'] .sys-boot { display:none; }
 
 /* Preserve the official product capitalization inside uppercase labels. */
 .product-name { text-transform: none; }
+
+/* Native dossier button covers the card; its source link remains a sibling. */
+.card-dossier { appearance:none; border:0; padding:0; background:none; color:inherit; font:inherit; text-align:inherit; cursor:pointer; }
+.card-dossier:focus-visible, .te-dossier:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+.card-meta .card-open { position:relative; z-index:2; }
+.section-state { padding:16px 0; color:var(--ink-2); font-size:13px; }
+.section-state p { margin:0 0 8px; }
+
+/* Fit the explicit Terminal label on narrow phones without changing the header. */
+@media (max-width:420px) {
+  .nav .theme-seg label { padding:6px 4px; }
+  .nav .brand-name { font-size:12px; }
+}
+
+.card .card-unavailable, .card:hover .card-unavailable { color:var(--ink-3); border-bottom-color:transparent; cursor:default; }
+
+.te-main, .card { cursor:default; }

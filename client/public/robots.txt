@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ai-news-aggregator4.vercel.app/sitemap.xml

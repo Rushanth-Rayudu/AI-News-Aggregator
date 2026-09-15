@@ -12,11 +12,11 @@ async function processSource(source, dependencies = {}) {
     const database = dependencies.db || db;
     const fetch = dependencies.fetchFeed || fetchFeed;
     const analyze = dependencies.processArticle || processArticle;
+    let processed = 0;
     try {
         const items = await fetch(source.feedUrl);
         if (!items.length) throw new Error('No recent dated articles extracted');
         const maxItems = Math.max(1, parseInt(process.env.MAX_NEW_ITEMS_PER_SOURCE || '10', 10));
-        let processed = 0;
         for (const item of items) {
             if (processed >= maxItems) break;
             if (await database.prepare('SELECT id FROM articles WHERE fingerprint=? OR url=?').get(item.fingerprint,item.url)) continue;
@@ -52,9 +52,14 @@ async function processSource(source, dependencies = {}) {
     } catch(error) {
         // Feed-specific errors cannot prevent later sources from running.
         const reason=/429/.test(error.message)?'HTTP 429: rate limited':/403/.test(error.message)?'HTTP 403: access denied':/404/.test(error.message)?'HTTP 404: feed missing':/timeout|timed out|abort/i.test(error.message)?'Fetch timeout':/No recent/.test(error.message)?'No recent dated articles extracted':'Feed fetch, parsing or processing failed';
-        await database.prepare('UPDATE sources SET lastError=? WHERE id=?').run(reason,source.id);
-        await recordFetch(database,source,{failure:true,httpStatus:Number(error.message.match(/\b(4\d\d|5\d\d)\b/)?.[1])||null});
-        return {error:reason};
+        try {
+            await database.prepare('UPDATE sources SET lastError=? WHERE id=?').run(reason,source.id);
+            await recordFetch(database,source,{failure:true,httpStatus:Number(error.message.match(/\b(4\d\d|5\d\d)\b/)?.[1])||null});
+        } catch {
+            // Preserve committed additions even when recording diagnostics fails.
+            throw Object.assign(new Error('Unable to record source health'), { processed });
+        }
+        return {error:reason,processed};
     }
 }
 async function syncSourcesWithRegistry(){
@@ -72,10 +77,18 @@ function runPipeline(){
     if(!activeRun)activeRun=(async()=>{
         await syncSourcesWithRegistry();
         const sources=await db.prepare('SELECT * FROM sources WHERE enabled=TRUE').all();
+        const result = { sourcesTotal:sources.length, attempted:0, succeeded:0, failed:0, skipped:0, articlesAdded:0 };
         for(const source of sources){
-            if(source.lastSuccessfulFetch && Date.now()-timestampMs(source.lastSuccessfulFetch)<(source.pollingInterval||30)*60000)continue;
-            try{await processSource(source);}catch{console.error('Unable to record source health for source',source.id);}
+            if(source.lastSuccessfulFetch && Date.now()-timestampMs(source.lastSuccessfulFetch)<(source.pollingInterval||30)*60000){ result.skipped++; continue; }
+            result.attempted++;
+            try {
+                const outcome = await processSource(source);
+                result.articlesAdded += outcome.processed || 0;
+                if (outcome.error) result.failed++;
+                else result.succeeded++;
+            } catch (error) { result.failed++; result.articlesAdded += error.processed || 0; console.error('Unable to record source health for source',source.id); }
         }
+        return { ...result, status:result.failed ? (result.succeeded ? 'partial' : 'failed') : 'completed', completedAt:new Date().toISOString() };
     })().finally(()=>{activeRun=null;});
     return activeRun;
 }

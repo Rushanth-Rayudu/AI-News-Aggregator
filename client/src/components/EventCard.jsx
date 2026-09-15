@@ -13,6 +13,8 @@ import {
 export default function EventCard({ event, index = 0, onClick }) {
   const sources = event.sources || [];
   const primarySource = event.primarySource || sources[0] || {};
+  let sourceUrl = null;
+  try { const url = new URL(primarySource.url); if (['http:', 'https:'].includes(url.protocol)) sourceUrl = url.href; } catch { /* No usable original source. */ }
   const timeAgo = formatDistanceToNow(event.publishedAt || event.discoveredAt);
   const state = storyStateOf(event);
   const summary = cleanSummary(event.summary);
@@ -22,11 +24,6 @@ export default function EventCard({ event, index = 0, onClick }) {
     <article
       className={`card${state ? ` ${state.rowCls}` : ''}${event.isNew ? ' is-new' : ''}`}
       style={{ '--i': Math.min(index, 14) }}
-      role="button"
-      tabIndex={0}
-      onClick={() => onClick(event)}
-      onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick(event); } }}
-      aria-label={`Open dossier: ${event.title}`}
     >
       <header className="card-top">
         <span className="card-no">{String(index + 1).padStart(2, '0')}</span>
@@ -36,7 +33,7 @@ export default function EventCard({ event, index = 0, onClick }) {
       </header>
 
       <h3 className="card-title">
-        {event.title}
+        <button type="button" className="card-dossier" onClick={() => onClick(event)} aria-label={`Open dossier: ${event.title}`}>{event.title}</button>
         {event.isNew && <span className="tag tag-new">New</span>}
       </h3>
       {summary && <p className="card-sum">{summary}</p>}
@@ -49,15 +46,15 @@ export default function EventCard({ event, index = 0, onClick }) {
         <span className="card-src" title={primarySource.sourceName || ''}>
           {primarySource.sourceName || 'Source tracking'}
         </span>
-        <a
+        {sourceUrl ? <a
           className="card-open"
-          href={primarySource.url || '#'}
+          href={sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
           onClick={e => e.stopPropagation()}
         >
           Source ↗
-        </a>
+        </a> : <span className="card-open card-unavailable" aria-label="Original source unavailable">Source unavailable</span>}
       </footer>
     </article>
   );

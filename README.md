@@ -207,9 +207,26 @@ Use the existing Vercel/Render/Supabase resources; product renaming does not req
 1. **Database:** configure the backend with its Supabase PostgreSQL connection. For a new database, review and apply `server/database/postgresSchema.sql` through your database administration workflow. Backend startup does not initialize the PostgreSQL schema. The SQLite import script is an explicit migration tool, not a naming step.
 2. **Render backend:** root directory `server`, build `npm ci`, start `npm start`. Configure database, Gemini, CORS, scheduler, and optional email/secrets on the backend only.
 3. **Vercel frontend:** root directory `client`, build `npm run build`, output `dist`. Set `VITE_API_BASE_URL` to the actual backend URL ending in `/api`. The included `client/vercel.json` provides SPA rewrites; it does not proxy API calls to Render.
-4. **Automation:** included workflows request ingestion every ten minutes and digest at 01:30 UTC (07:00 India time). Configure repository secrets `BACKEND_URL`, `INGEST_SECRET`, and `DIGEST_SECRET`. Set backend `ENABLE_INTERNAL_SCHEDULER=false` when these workflows own scheduling. Alternatively use the internal scheduler and disable scheduled workflow triggers to avoid duplicate jobs.
+4. **Automation:** included workflows request ingestion every ten minutes and digest at 01:30 UTC (07:00 India time). Configure repository secrets `BACKEND_URL`, `INGEST_SECRET`, and `DIGEST_SECRET`. The internal scheduler defaults enabled unless `ENABLE_INTERNAL_SCHEDULER=false`. Preserve the current setting while validating Actions. Calls share one active ingestion run per Node process; internal scheduling cannot run while Render sleeps.
 
 GitHub Actions uses the workflow cron expressions, not the backend's digest time variables. Hosting cold starts and scheduling delays depend on the selected plans; no free-tier availability is guaranteed.
+
+### Scheduled ingestion configuration and verification
+
+In repository **Settings → Secrets and variables → Actions → Repository secrets**, configure:
+
+- `BACKEND_URL`: `https://ai-intelligence-dashboard-7fjk.onrender.com` (origin only; a trailing slash is accepted, but `/api`, quotes, whitespace, credentials and query strings are rejected).
+- `INGEST_SECRET`: the same private value configured in the Render service environment. Never paste this value into chat or logs. Environment-scoped GitHub secrets are not available to this job, which does not select a GitHub environment.
+
+The workflow calls `POST https://ai-intelligence-dashboard-7fjk.onrender.com/api/internal/ingest` with `x-ingest-secret` and no query parameters. The endpoint waits for the pipeline; its legacy `status: "ingest started"` string is retained for compatibility, while the additive `result` contains completion status, source counts, articles added and completion time. A missing server secret returns HTTP 500; an incorrect/missing request header returns HTTP 401.
+
+The runner first checks `GET /api/status`: up to three attempts, 90 seconds each, with 15-second connection limits and 15 seconds between attempts. It then sends one authenticated POST with a 20-minute total limit and a 15-second connection limit. The job has a 30-minute limit and does not cancel an active scheduled run. POSTs are not retried: a timed-out request may still be processing. The next scheduled attempt shares an active run on the same backend process, or respects per-source polling intervals.
+
+Actions requests a run every ten minutes in UTC, but GitHub may delay/drop scheduled runs; long jobs can also coalesce pending runs. An HTTP wake-up can start a sleeping Render service. The internal timer provides redundancy only while the process is running. This is best-effort scheduling, not an availability guarantee.
+
+After the backend update is deployed and the workflow/helper are on the default branch, use **Actions → RSS Ingestion → Run workflow**. Confirm numeric completion counts. Source failures make the job fail even if some articles were saved; all sources being not due is a valid zero-work completion. Inspect source health rather than repeatedly rerunning partial failures.
+
+Compare `/api/status` and `/api/sources` before/after: source-fetch timestamps should advance when due. When the completion summary reports articles added, verify article counts and new publication/discovery records in `/api/events?sort=latest&timeframe=24h`. Zero additions can legitimately mean no new qualifying feed entries. Existing `ingestion.lastSuccessfulSourceFetchAt` reports only a source fetch, not full-pipeline success. The response's `completedAt` is per-request evidence; no durable `lastSuccessfulIngestionAt` is recorded. Persistent whole-run history remains a future improvement.
 
 ### Naming and compatibility
 

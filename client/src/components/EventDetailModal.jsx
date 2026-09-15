@@ -24,11 +24,12 @@ function ConfidenceTag({ event }) {
 export default function EventDetailModal({ event, onClose, watchlist = [], onToggleTopic }) {
   const [closing, setClosing] = useState(false);
   const closeRef = useRef(null);
+  const closeTimer = useRef(null);
 
   function requestClose() {
-    if (closing) return;
+    if (closeTimer.current !== null) return;
     setClosing(true);
-    setTimeout(onClose, 190);
+    closeTimer.current = setTimeout(onClose, 190);
   }
 
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function EventDetailModal({ event, onClose, watchlist = [], onTog
     document.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = previousOverflow;
+      clearTimeout(closeTimer.current);
       previousFocus?.focus();
       document.removeEventListener('keydown', onKey);
     };

@@ -1,4 +1,12 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Schema TIMESTAMP fields contain UTC, regardless of the Node host timezone.
+const utcTypes = {
+    getTypeParser(oid, format) {
+        if (oid === 1114 && format !== 'binary') return value => new Date(value.replace(' ', 'T') + 'Z');
+        return types.getTypeParser(oid, format);
+    },
+};
 
 function normalizeSqlForPostgres(sql) {
     if (!sql) return sql;
@@ -144,6 +152,8 @@ async function runTransaction(pool, callback) {
 function createPostgresAdapter(connectionString) {
     const pool = new Pool({
         connectionString,
+        types: utcTypes,
+        options: '-c timezone=UTC',
         ssl: process.env.PGSSLMODE === 'require' ? { rejectUnauthorized: false } : false,
         max: 10,
         idleTimeoutMillis: 30000,
@@ -181,6 +191,7 @@ function createPostgresAdapter(connectionString) {
 
 module.exports = {
     createPostgresAdapter,
+    utcTypes,
     runTransaction,
     normalizeSqlForPostgres,
 };

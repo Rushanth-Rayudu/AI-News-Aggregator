@@ -8,7 +8,7 @@ import { SOURCE_GROUPS, STATIC_SOURCE_COUNT } from '../data/sources';
 import '../styles/landing.css';
 
 const THEME_OPTIONS = [
-  { value: 'sys', label: 'Sys' },
+  { value: 'sys', label: 'Terminal' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];

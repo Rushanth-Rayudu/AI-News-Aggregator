@@ -6,6 +6,7 @@ const { sendDailyDigest } = require('../email/digestService');
 const { enrichEvent, metadata, healthOf } = require('../services/sourceIntelligence');
 const { eventQuery } = require('../services/searchService');
 const { fetchDiagnostics } = require('../services/sourceHealth');
+const { loadTopEvents, ingestionStatus } = require('../services/topEventsService');
 const router = express.Router();
 
 function requireInternalSecret(headerName, envVarName) {
@@ -32,6 +33,7 @@ router.get('/', (req, res) => {
         endpoints: {
             "GET /api/status": "System health and database metrics",
             "GET /api/events": "List deduplicated news events (supports ?category=, ?timeframe=, ?sort=, ?limit=, ?offset=)",
+            "GET /api/events/top": "Current priority events with publication-based freshness and fallback windows",
             "GET /api/events/since": "Recent events discovered since an ISO timestamp (?since=&limit=)",
             "GET /api/events/:id": "Single event details with source articles",
             "GET /api/sources": "List monitored RSS news sources with latest article",
@@ -154,6 +156,11 @@ router.get('/themes', async (req, res) => {
     }
 });
 
+router.get('/events/top', async (req, res) => {
+    try { res.json(await loadTopEvents(db)); }
+    catch { res.status(500).json({ error: 'Request failed. Please retry shortly.' }); }
+});
+
 router.get('/events/:id', async (req, res) => {
     try {
         const event = await db.prepare('SELECT * FROM events WHERE id = ?').get(req.params.id);
@@ -210,12 +217,13 @@ router.get('/status', async (req, res) => {
             if (s.enabled) sources.enabled++;
             sources[healthOf(s,{publishedAt:diagnostics[s.id]?.lastArticleAt || s.publishedAt}).health]++;
         }
-        const articles = await db.prepare('SELECT COUNT(*) as count FROM articles').get();
+        const articles = await db.prepare('SELECT COUNT(*) as count, MAX(discoveredAt) as discoveredAt FROM articles').get();
         const events = await db.prepare('SELECT COUNT(*) as count FROM events').get();
         const lastDigest = await db.prepare('SELECT sentAt FROM daily_digests ORDER BY id DESC LIMIT 1').get();
 
         res.json({
             sources,
+            ingestion: ingestionStatus(sourceRows, articles.discoveredAt),
             articles: articles.count || 0,
             events: events.count || 0,
             geminiConfigured: !!process.env.GEMINI_API_KEY,
@@ -249,8 +257,9 @@ router.post('/send-test-email', requireInternalSecret('x-digest-secret', 'DIGEST
 
 router.post('/internal/ingest', requireInternalSecret('x-ingest-secret', 'INGEST_SECRET'), async (req, res) => {
     try {
-        await runPipeline();
-        res.json({ status: 'ingest started' });
+        const result = await runPipeline();
+        // Preserve the legacy status string; result describes the awaited run.
+        res.json({ status: 'ingest started', result });
     } catch (error) {
         res.status(500).json({ error: 'Request failed. Please retry shortly.' });
     }

@@ -5,17 +5,27 @@ on:
     - cron: '*/10 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: production-rss-ingestion
+  cancel-in-progress: false
+
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
       - name: Trigger secure ingestion endpoint
         env:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
           INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
-        run: |
-          echo "Triggering RSS ingestion at $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          curl --fail --silent --show-error \
-            -H "x-ingest-secret: ${INGEST_SECRET}" \
-            -X POST "${BACKEND_URL}/api/internal/ingest"
-          echo "RSS ingestion request completed successfully."
+        run: node .github/scripts/ingest.cjs

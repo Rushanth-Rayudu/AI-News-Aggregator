@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import SectionState from './SectionState';
 import Reveal from './Reveal';
 import { formatDistanceToNow } from '../utils/timeUtils';
 
@@ -8,7 +9,7 @@ import { formatDistanceToNow } from '../utils/timeUtils';
  * the recency column shows the newest activity per theme. Clicking a row
  * filters the intelligence feed (existing product behavior).
  */
-export default function MomentumBoard({ themes, activeCategory, onSelectTheme }) {
+export default function MomentumBoard({ themes, activeCategory, onSelectTheme, loading, error, onRetry }) {
   const rows = useMemo(() => {
     if (!themes || themes.length === 0) return [];
     const meaningful = themes.filter(t => t.category && t.category !== 'Other');
@@ -19,9 +20,9 @@ export default function MomentumBoard({ themes, activeCategory, onSelectTheme })
     const max = Math.max(...sorted.map(t => Number(t.count) || 0), 1);
     return sorted.map(t => {
       const count = Number(t.count) || 0;
-      // Qualitative signal strength derived from the real count distribution
+      // Relative activity derived from the real count distribution
       // — no fabricated trend values.
-      const signal = count >= max * 0.75 ? 'High' : count >= max * 0.4 ? 'Active' : 'Steady';
+      const signal = count === max ? 'Most active' : count >= max * 0.4 ? 'Active' : 'Lower activity';
       return {
         ...t,
         count,
@@ -31,7 +32,7 @@ export default function MomentumBoard({ themes, activeCategory, onSelectTheme })
     });
   }, [themes]);
 
-  if (rows.length === 0) return null;
+  if (loading || error || rows.length === 0) return <SectionState number="02" title="What's moving" loading={loading} error={error} onRetry={onRetry} empty="No category activity available in the current window." />;
 
   return (
     <section className="band" aria-label="What's moving">
@@ -40,7 +41,7 @@ export default function MomentumBoard({ themes, activeCategory, onSelectTheme })
           <span className="band-no">02</span>
           <div className="band-title">
             <h2>What&rsquo;s moving</h2>
-            <span className="m-label m-sub">Theme activity across the current window</span>
+            <span className="m-label m-sub">Relative category activity in the current window</span>
           </div>
           <div className="band-aside">
             <span className="m-label">Click a theme to filter</span>

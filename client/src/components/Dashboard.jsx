@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { fetchEvents, fetchStatus, fetchThemes, fetchEventsSince, fetchSources } from '../utils/api';
+import { fetchTopEvents, fetchEvents, fetchStatus, fetchThemes, fetchEventsSince, fetchSources } from '../utils/api';
 import { getWatchlist, saveWatchlist, getLastVisit, saveLastVisit } from '../utils/storage';
 import { parseTimestamp } from '../utils/timeUtils';
 
 
+import { DEFAULT_FILTERS, useDashboardLocation } from '../utils/dashboardLocation';
 import TopNav from './TopNav';
 import SituationBand from './SituationBand';
 import AnalystBrief from './AnalystBrief';
@@ -20,18 +21,8 @@ import ManageFollowing from './ManageFollowing';
 
 const PAGE_SIZE = 50;
 const POLL_INTERVAL = 60000;
-const BOOT_HARD_CAP_MS = 2600;
+const BOOT_HARD_CAP_MS = 1200;
 
-const DEFAULT_FILTERS = {
-  category: 'All',
-  timeframe: '24h',
-  search: '',
-  sort: 'latest',
-  source: '',
-  onlyHighConfidence: false,
-  onlyImportant: false,
-  forYou: false,
-};
 
 
 function dedupeById(list) {
@@ -88,7 +79,11 @@ export default function Dashboard({ theme, onThemeChange }) {
   const requestVersion = useRef(0);
   const feedCheckedAt = useRef(Date.now());
   const [themes, setThemes] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [themesLoading, setThemesLoading] = useState(true);
+  const [themesError, setThemesError] = useState(false);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState(false);
+  const { filters, setFilters, selected, openEvent, closeEvent, dossierLoading, dossierError } = useDashboardLocation();
   const [manageFollowing, setManageFollowing] = useState(false);
   const [featuredEvents, setFeaturedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -102,18 +97,6 @@ export default function Dashboard({ theme, onThemeChange }) {
   const [pendingNewEvents, setPendingNewEvents] = useState([]);
   const [visitInfo, setVisitInfo] = useState(null);
   const [watchlist, setWatchlist] = useState(() => getWatchlist());
-  const [filters, setFilters] = useState(() => {
-    if (typeof window === 'undefined') return DEFAULT_FILTERS;
-    let merged = DEFAULT_FILTERS;
-    try {
-      const saved = JSON.parse(localStorage.getItem('ai-intelligence-filters') || 'null');
-      if (saved) merged = { ...DEFAULT_FILTERS, ...saved };
-    } catch {
-      merged = DEFAULT_FILTERS;
-    }
-    merged = { ...merged, onlyHighConfidence: false, onlyImportant: false };
-    return merged;
-  });
 
   const eventsRef = useRef(events);
   useEffect(() => {
@@ -158,7 +141,7 @@ export default function Dashboard({ theme, onThemeChange }) {
     loadStatus();
     loadThemes();
     loadSources();
-    fetchEvents({ limit: 4, timeframe: '7d', sort: 'importance' }).then(setFeaturedEvents).catch(() => {});
+    loadFeatured();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -332,12 +315,21 @@ export default function Dashboard({ theme, onThemeChange }) {
   }
 
   async function loadThemes() {
+    setThemesLoading(true);
     try {
       const data = await fetchThemes();
       setThemes(data);
+      setThemesError(false);
     } catch {
-      setThemes([]);
-    }
+      setThemesError(true);
+    } finally { setThemesLoading(false); }
+  }
+
+  async function loadFeatured() {
+    setFeaturedLoading(true);
+    try { setFeaturedEvents(await fetchTopEvents()); setFeaturedError(false); }
+    catch { setFeaturedError(true); }
+    finally { setFeaturedLoading(false); }
   }
 
   async function handleRefresh() {
@@ -347,10 +339,10 @@ export default function Dashboard({ theme, onThemeChange }) {
       await loadEvents({ page: 0, append: false });
       await loadStatus();
       await loadThemes();
-      await fetchEvents({ limit: 4, timeframe: "7d", sort: "importance" }).then(setFeaturedEvents);
+      await loadFeatured();
       await loadSources();
     } catch {
-      setError('Unable to refresh right now. Your existing stories are still available.');
+      setError('Unable to check updates right now. Your existing stories are still available.');
     } finally {
       setRefreshing(false);
     }
@@ -371,7 +363,7 @@ export default function Dashboard({ theme, onThemeChange }) {
 
   const showForYouEmptyState = filters.forYou && watchlist.length === 0;
   const hasActiveFilters = filters.category !== 'All'
-    || filters.timeframe !== '24h'
+    || filters.timeframe !== '7d'
     || Boolean(filters.search)
     || Boolean(filters.source)
     || filters.onlyHighConfidence
@@ -394,10 +386,11 @@ export default function Dashboard({ theme, onThemeChange }) {
       {bootMounted && <BootLoader done={bootDone} />}
 
       <main className="mw">
+        {(dossierLoading || dossierError) && <div className="alert" role={dossierError ? 'alert' : 'status'}><p>{dossierError || 'Loading event dossier...'}</p><button className="btn" onClick={closeEvent}>Return to feed</button></div>}
         <SituationBand status={status} storyCount={filteredEvents.length} lastUpdated={lastUpdated} />
 
         {visitInfo && visitInfo.count > 0 && (
-          <AnalystBrief info={visitInfo} onOpen={setSelected} onDismiss={markVisitSeen} />
+          <AnalystBrief info={visitInfo} onOpen={openEvent} onDismiss={markVisitSeen} />
         )}
 
         {error && (
@@ -410,9 +403,9 @@ export default function Dashboard({ theme, onThemeChange }) {
           </div>
         )}
 
-        <TopEvents events={featuredEvents} onSelect={setSelected} />
+        <TopEvents ingestion={status?.ingestion} events={featuredEvents} onSelect={openEvent} loading={featuredLoading} error={featuredError} onRetry={loadFeatured} />
 
-        <MomentumBoard themes={themes} activeCategory={filters.category} onSelectTheme={selectTheme} />
+        <MomentumBoard themes={themes} activeCategory={filters.category} onSelectTheme={selectTheme} loading={themesLoading} error={themesError} onRetry={loadThemes} />
 
         <section className="band" id="feed" aria-label="Intelligence feed">
           <Reveal>
@@ -458,7 +451,7 @@ export default function Dashboard({ theme, onThemeChange }) {
               {loading ? (
                 <FeedSkeleton />
               ) : filteredEvents.length === 0 ? (
-                showForYouEmptyState ? (
+                error ? (<div className="feed-empty"><h3>Records are unavailable.</h3><p>Use Retry above to check again.</p></div>) : showForYouEmptyState ? (
                   <div className="feed-empty">
                     <h3>You're not following any interests yet.</h3>
                     <p>Choose companies or topics to see intelligence matching your interests.</p>
@@ -473,13 +466,13 @@ export default function Dashboard({ theme, onThemeChange }) {
                 ) : (
                   <div className="feed-empty">
                     <h3>Waiting for the next signal.</h3>
-                    <p>The intelligence feed is monitoring the sources that matter.</p>
-                    <button type="button" className="btn" onClick={handleRefresh}>Refresh</button>
+                    <p>No events are available in this window. Check updates or choose a wider time range.</p>
+                    <button type="button" className="btn" onClick={handleRefresh} disabled={refreshing}>{refreshing ? 'Checking...' : 'Check updates'}</button>
                   </div>
                 )
               ) : (
                 filteredEvents.map((event, idx) => (
-                  <EventCard key={event.id} index={idx} event={event} onClick={setSelected} />
+                  <EventCard key={event.id} index={idx} event={event} onClick={openEvent} />
                 ))
               )}
             </div>
@@ -497,7 +490,8 @@ export default function Dashboard({ theme, onThemeChange }) {
         <SystemStatus status={status} statusError={statusError} sources={sources} sourcesError={sourcesError} onRetrySources={loadSources} refreshing={refreshing} onRefresh={handleRefresh} />
       </main>
 
-      {selected && <EventDetailModal event={selected} watchlist={watchlist} onToggleTopic={toggleTopic} onClose={() => setSelected(null)} />}
+
+      {selected && <EventDetailModal key={selected.id} event={selected} watchlist={watchlist} onToggleTopic={toggleTopic} onClose={closeEvent} />}
       {manageFollowing && <ManageFollowing watchlist={watchlist} onToggle={toggleTopic} onClear={clearWatchlist} onClose={() => setManageFollowing(false)} />}
 
       <button

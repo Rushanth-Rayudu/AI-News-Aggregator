@@ -1,3 +1,4 @@
+import SectionState from './SectionState';
 import Reveal from './Reveal';
 import { formatDistanceToNow } from '../utils/timeUtils';
 import {
@@ -26,8 +27,9 @@ function EventTags({ event, state }) {
  * never an empty cell or reserved blank space — regardless of headline or
  * summary length, or how many secondary stories exist.
  */
-export default function TopEvents({ events, onSelect }) {
-  if (!events || events.length === 0) return null;
+export default function TopEvents({ events, onSelect, loading, error, onRetry, ingestion }) {
+  const fetchStale = ingestion?.sourceFetchStatus === 'stale';
+  if (loading || error || !events?.length) return <SectionState number="01" title="Top AI events" loading={loading} error={error} onRetry={onRetry} empty={fetchStale ? "News collection is overdue. No qualifying priority events are available." : "No priority events available in the current window."} />;
 
   const primary = events[0];
   const side = events.slice(1, 4);
@@ -42,7 +44,7 @@ export default function TopEvents({ events, onSelect }) {
           <span className="band-no">01</span>
           <div className="band-title">
             <h2>Top AI events</h2>
-            <span className="m-label m-sub">Priority wire · strongest signals first</span>
+            <span className="m-label m-sub">Priority developments · {events.some(event => event.freshnessBucket !== '24h') ? 'Recent coverage' : 'Last 24 hours'}</span>
           </div>
           <div className="band-aside">
             <span className="m-label">{events.length} tracked</span>
@@ -50,18 +52,14 @@ export default function TopEvents({ events, onSelect }) {
         </header>
       </Reveal>
 
+      {fetchStale && <p className="m-label" role="status">News collection is overdue · coverage may be incomplete.</p>}
       <Reveal delay={80}>
         <div className="te">
           <article
             className="te-main"
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelect(primary)}
-            onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect(primary); } }}
-            aria-label={`Open dossier: ${primary.title}`}
           >
             <EventTags event={primary} state={primaryState} />
-            <h3 className="te-title">{primary.title}</h3>
+            <h3 className="te-title"><button type="button" className="te-dossier" onClick={() => onSelect(primary)} aria-label={`Open dossier: ${primary.title}`}>{primary.title}</button></h3>
             {cleanSummary(primary.summary) && <p className="te-sum">{cleanSummary(primary.summary)}</p>}
             {cleanWhy(primary.whyItMatters) && (
               <div className="te-why">
@@ -70,6 +68,8 @@ export default function TopEvents({ events, onSelect }) {
               </div>
             )}
             <div className="te-foot">
+              <time dateTime={primary.publishedAt}>{formatDistanceToNow(primary.publishedAt)}</time>
+              <span className="sep" aria-hidden="true" />
               <span>{primarySources.length} source{primarySources.length !== 1 ? 's' : ''}</span>
               <span className="sep" aria-hidden="true" />
               <span>{primary.organizationCount ?? new Set(primarySources.map(s => s.organization || s.sourceName)).size} publishing organization(s)</span>
@@ -79,7 +79,7 @@ export default function TopEvents({ events, onSelect }) {
                   <span>{primarySource.sourceName}</span>
                 </>
               )}
-              <span className="te-open" aria-hidden="true">Open dossier →</span>
+              <button type="button" className="te-dossier te-open" onClick={() => onSelect(primary)}>Open dossier →</button>
             </div>
           </article>
 
@@ -92,18 +92,13 @@ export default function TopEvents({ events, onSelect }) {
                   <article
                     key={event.id}
                     className="te-item"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onSelect(event)}
-                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(event); } }}
-                    aria-label={`Open dossier: ${event.title}`}
                   >
                     <span className="te-idx">{String(i + 2).padStart(2, '0')}</span>
-                    <h3>{event.title}</h3>
+                    <h3><button type="button" className="te-dossier" onClick={() => onSelect(event)} aria-label={`Open dossier: ${event.title}`}>{event.title}</button></h3>
                     {cleanSummary(event.summary) && <p>{cleanSummary(event.summary)}</p>}
                     <div className="te-mm">
                       <span>{event.category || 'AI News'}</span>
-                      <span>{formatDistanceToNow(event.publishedAt || event.discoveredAt)}</span>
+                      <time dateTime={event.publishedAt}>{formatDistanceToNow(event.publishedAt)}</time>
                       <span>{sources.length} src</span>
                       {state && <span className={`tag ${state.tagCls}`}>{state.label}</span>}
                     </div>

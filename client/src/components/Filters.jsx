@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { WATCHLIST_TOPICS } from '../utils/storage';
 
-const CATEGORIES = ['All', 'Model Release', 'AI Research', 'Open Source AI', 'AI Agents', 'Generative AI', 'Robotics', 'Computer Vision', 'Multimodal AI', 'AI Coding', 'AI Infrastructure', 'AI Chips / Hardware', 'AI Safety', 'AI Security', 'AI Regulation / Policy', 'AI Companies', 'AI Startups', 'AI Products', 'AI Applications', 'Scientific AI', 'Healthcare AI', 'Education AI', 'Business / Enterprise AI', 'Other'];
+import { CATEGORIES } from '../utils/dashboardQuery';
 
 export default function Filters({ sources = [], filters, onChange, onReset, watchlist, onManageFollowing }) {
   const searchRef = useRef(null);
@@ -21,7 +21,7 @@ export default function Filters({ sources = [], filters, onChange, onReset, watc
   ];
   return <section className="cmd" aria-label="Feed controls">
     <div className="cmd-row">
-      <div className="cmd-search"><span aria-hidden="true">⌕</span><input ref={searchRef} type="search" list="intelligence-suggestions" placeholder="Search AI intelligence…" aria-label="Search AI intelligence" value={filters.search} onChange={e => onChange({ ...filters, search: e.target.value })} /><span className="key" aria-hidden="true">/</span></div>
+      <div className="cmd-search"><span aria-hidden="true">⌕</span><input ref={searchRef} type="search" maxLength={200} list="intelligence-suggestions" placeholder="Search AI intelligence…" aria-label="Search AI intelligence" value={filters.search} onChange={e => onChange({ ...filters, search: e.target.value })} /><span className="key" aria-hidden="true">/</span></div>
       <datalist id="intelligence-suggestions">{[...new Set([...WATCHLIST_TOPICS.map(t => t.label), ...organizations, ...CATEGORIES.slice(1)])].map(label => <option key={label} value={label} />)}</datalist>
       <div className="seg" role="group" aria-label="Intelligence view">
         {[['latest', 'Latest'], ['importance', 'Important'], ['following', 'Following']].map(([id, label]) => <button key={id} className={mode === id ? 'on' : ''} aria-pressed={mode === id} onClick={() => onChange({ ...filters, sort: id === 'importance' ? 'importance' : 'latest', forYou: id === 'following', onlyHighConfidence: false, onlyImportant: false })}>{label}</button>)}

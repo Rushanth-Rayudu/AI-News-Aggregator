@@ -1,5 +1,11 @@
 const BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
+export async function fetchTopEvents() {
+  const res = await fetch(`${BASE}/events/top`);
+  if (!res.ok) throw new Error('Failed to fetch top events');
+  return res.json();
+}
+
 export async function fetchEvents(params = {}) {
   const qs = new URLSearchParams(params).toString();
   const res = await fetch(`${BASE}/events${qs ? `?${qs}` : ''}`);

@@ -2,6 +2,7 @@ const registry = require('../feeds/registry.json');
 const { decodeFeedText } = require('./textNormalization');
 function timestampMs(value) {
   if (!value) return NaN;
+  if (value instanceof Date) return value.getTime();
   const normalized = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(value)
     ? `${value.replace(' ', 'T')}Z`
     : value;

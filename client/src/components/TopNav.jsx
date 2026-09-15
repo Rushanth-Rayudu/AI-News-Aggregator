@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { navigate, ROUTES } from '../utils/router';
 
 const NAV_ITEMS = [
-  { label: 'Today', category: 'All' },
+  { label: 'All news', category: 'All' },
   { label: 'Research', category: 'AI Research' },
   { label: 'Models', category: 'Model Release' },
   { label: 'Open Source', category: 'Open Source AI' },
@@ -10,7 +10,7 @@ const NAV_ITEMS = [
 ];
 
 const THEME_OPTIONS = [
-  { value: 'sys', label: 'Sys' },
+  { value: 'sys', label: 'Terminal' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
 ];
@@ -90,10 +90,10 @@ export default function TopNav({ activeCategory, onNavigate, onRefresh, refreshi
             className="btn btn-refresh"
             onClick={onRefresh}
             disabled={refreshing}
-            aria-label="Refresh news feed"
+            aria-label={refreshing ? "Checking for updates" : "Check for feed updates"}
           >
             <span className={refreshing ? 'spin' : ''} aria-hidden="true">↻</span>
-            <span>{refreshing ? 'Syncing' : 'Refresh'}</span>
+            <span>{refreshing ? 'Checking...' : 'Check updates'}</span>
           </button>
 
           <button

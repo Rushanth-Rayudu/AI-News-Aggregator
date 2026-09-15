@@ -40,7 +40,7 @@ export default function SystemStatus({ status, statusError, sources, sourcesErro
           </div>
           <div className="band-aside">
             <button type="button" className="btn" onClick={onRefresh} disabled={refreshing}>
-              {refreshing ? 'Refreshing…' : 'Refresh status'}
+              {refreshing ? 'Checking...' : 'Check updates'}
             </button>
             <button
               type="button"

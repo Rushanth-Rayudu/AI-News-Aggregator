@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 
 const STEPS = [
-  'CONNECTING SOURCES',
-  'SYNCHRONIZING EVENTS',
-  'BUILDING INTELLIGENCE LAYER',
-  'SIGNAL LOCKED',
+  'READER VIEW',
+  'DISPLAY LAYOUT',
+  'READING CONTROLS',
+  'WELCOME',
 ];
 
 /**
@@ -27,7 +27,7 @@ export default function BootLoader({ done }) {
     <div className={`boot${done ? ' done' : ''}`} aria-hidden="true">
       <div className="boot-inner">
         <div className="boot-brand"><i />AI News Aggregator</div>
-        <div className="boot-sub">SIGNAL ACQUISITION</div>
+        <div className="boot-sub">VISUAL INITIALIZATION</div>
         <div className="boot-steps">
           {STEPS.map((label, i) => (
             <div

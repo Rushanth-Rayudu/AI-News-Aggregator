@@ -84,6 +84,16 @@ function App() {
       if(!tag){tag=document.createElement('meta');tag.setAttribute('property',property);document.head.appendChild(tag);}
       tag.setAttribute('content',content);
     }
+    const canonicalUrl = 'https://ai-news-aggregator4.vercel.app/' + (meta.key === 'news' ? 'news' : 'home')
+    const canonical = document.querySelector('link[rel="canonical"]')
+    if (canonical) {
+      if (meta.key === 'notFound') canonical.removeAttribute('href')
+      else canonical.setAttribute('href', canonicalUrl)
+    }
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalUrl)
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', TITLES[meta.key])
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', DESCRIPTIONS[meta.key])
+    document.querySelector('meta[name="robots"]')?.setAttribute('content', meta.key === 'notFound' ? 'noindex,follow' : 'index,follow')
     window.scrollTo({ top: 0, behavior: 'auto' })
   }, [meta.key])
 
