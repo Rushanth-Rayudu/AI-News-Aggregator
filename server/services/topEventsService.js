@@ -28,27 +28,38 @@ function selectTopEvents(events, now = Date.now(), limit = 4) {
       }));
 }
 
+const CANDIDATE_BATCH_SIZE = 200;
 async function loadTopEvents(db, now = Date.now()) {
-    // All candidates in the bounded seven-day window BEFORE ranking/limiting.
-    // Two batched queries, without changing ordinary feed pagination.
-    const candidates = await db.prepare(`
-        SELECT e.* FROM events e
-        WHERE e.importanceScore >= 60 AND
-        REPLACE(CAST((SELECT MIN(publishedAt) FROM articles a WHERE a.eventId=e.id) AS TEXT),'T',' ') >= ?
-    `).all(new Date(now - 168 * HOUR).toISOString().replace('T', ' ').replace('Z', ''));
-    if (!candidates.length) return [];
-    const articles = await db.prepare(`
-        SELECT a.eventId, a.title, a.description, a.url, a.publishedAt, a.discoveredAt,
-               s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
-        FROM articles a JOIN sources s ON a.sourceId=s.id
-        WHERE a.eventId IN (${candidates.map(() => '?').join(',')})
-    `).all(...candidates.map(e => e.id));
-    const grouped = new Map();
-    for (const article of articles) {
-        if (!grouped.has(article.eventId)) grouped.set(article.eventId, []);
-        grouped.get(article.eventId).push(article);
+    // Keyset pages keep candidate memory and every IN list bounded. Rank each
+    // batch with the current best four, so no SQL pre-sort can discard a winner.
+    const upperId = (await db.prepare('SELECT MAX(id) AS id FROM events').get())?.id;
+    if (!upperId) return [];
+    let afterId = 0, best = [];
+    const cutoff = new Date(now - 168 * HOUR).toISOString().replace('T', ' ').replace('Z', '');
+    while (afterId < upperId) {
+        const candidates = await db.prepare(`
+            SELECT e.* FROM events e
+            WHERE e.id > ? AND e.id <= ? AND e.importanceScore >= 60 AND
+            REPLACE(CAST((SELECT MIN(publishedAt) FROM articles a WHERE a.eventId=e.id) AS TEXT),'T',' ') >= ?
+            ORDER BY e.id ASC LIMIT ?
+        `).all(afterId, upperId, cutoff, CANDIDATE_BATCH_SIZE);
+        if (!candidates.length) break;
+        const articles = await db.prepare(`
+            SELECT a.eventId, a.title, a.description, a.url, a.publishedAt, a.discoveredAt,
+                   s.sourceName, a.isPrimary, s.credibilityTier, s.sourceType
+            FROM articles a JOIN sources s ON a.sourceId=s.id
+            WHERE a.eventId IN (${candidates.map(() => '?').join(',')})
+        `).all(...candidates.map(e => e.id));
+        const grouped = new Map();
+        for (const article of articles) {
+            if (!grouped.has(article.eventId)) grouped.set(article.eventId, []);
+            grouped.get(article.eventId).push(article);
+        }
+        best = selectTopEvents([...best, ...candidates.map(e => enrichEvent(e, grouped.get(e.id) || []))], now);
+        afterId = candidates[candidates.length - 1].id;
+        if (candidates.length < CANDIDATE_BATCH_SIZE) break;
     }
-    return selectTopEvents(candidates.map(e => enrichEvent(e, grouped.get(e.id) || [])), now);
+    return best;
 }
 
 function ingestionStatus(sources, latestArticleDiscoveredAt, now = Date.now()) {
@@ -66,4 +77,4 @@ function ingestionStatus(sources, latestArticleDiscoveredAt, now = Date.now()) {
         sourceFetchStatus: current ? 'current' : successful.length ? 'stale' : 'unknown',
     };
 }
-module.exports = { selectTopEvents, loadTopEvents, ingestionStatus };
+module.exports = { selectTopEvents, loadTopEvents, ingestionStatus, CANDIDATE_BATCH_SIZE };

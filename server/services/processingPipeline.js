@@ -13,9 +13,11 @@ async function processSource(source, dependencies = {}) {
     const fetch = dependencies.fetchFeed || fetchFeed;
     const analyze = dependencies.processArticle || processArticle;
     let processed = 0;
+    let phase = 'feed';
     try {
         const items = await fetch(source.feedUrl);
         if (!items.length) throw new Error('No recent dated articles extracted');
+        phase = 'processing';
         const maxItems = Math.max(1, parseInt(process.env.MAX_NEW_ITEMS_PER_SOURCE || '10', 10));
         for (const item of items) {
             if (processed >= maxItems) break;
@@ -59,7 +61,7 @@ async function processSource(source, dependencies = {}) {
             // Preserve committed additions even when recording diagnostics fails.
             throw Object.assign(new Error('Unable to record source health'), { processed });
         }
-        return {error:reason,processed};
+        return {error:reason,processed,failureKind:phase === 'feed' ? 'source' : 'pipeline'};
     }
 }
 async function syncSourcesWithRegistry(){
@@ -77,18 +79,22 @@ function runPipeline(){
     if(!activeRun)activeRun=(async()=>{
         await syncSourcesWithRegistry();
         const sources=await db.prepare('SELECT * FROM sources WHERE enabled=TRUE').all();
-        const result = { sourcesTotal:sources.length, attempted:0, succeeded:0, failed:0, skipped:0, articlesAdded:0 };
+        const result = { sourcesTotal:sources.length, attempted:0, succeeded:0, failed:0, skipped:0, articlesAdded:0, pipelineFailures:0, failedSources:[] };
         for(const source of sources){
             if(source.lastSuccessfulFetch && Date.now()-timestampMs(source.lastSuccessfulFetch)<(source.pollingInterval||30)*60000){ result.skipped++; continue; }
             result.attempted++;
             try {
                 const outcome = await processSource(source);
                 result.articlesAdded += outcome.processed || 0;
-                if (outcome.error) result.failed++;
+                if (outcome.error) {
+                    result.failed++;
+                    if (outcome.failureKind === 'source') result.failedSources.push({sourceName:source.sourceName,reason:outcome.error});
+                    else result.pipelineFailures++;
+                }
                 else result.succeeded++;
-            } catch (error) { result.failed++; result.articlesAdded += error.processed || 0; console.error('Unable to record source health for source',source.id); }
+            } catch (error) { result.failed++; result.pipelineFailures++; result.articlesAdded += error.processed || 0; console.error('Unable to record source health for source',source.id); }
         }
-        return { ...result, status:result.failed ? (result.succeeded ? 'partial' : 'failed') : 'completed', completedAt:new Date().toISOString() };
+        return { ...result, pipelineCompleted:true, status:result.pipelineFailures ? 'failed' : result.failed ? 'partial' : 'completed', completedAt:new Date().toISOString() };
     })().finally(()=>{activeRun=null;});
     return activeRun;
 }

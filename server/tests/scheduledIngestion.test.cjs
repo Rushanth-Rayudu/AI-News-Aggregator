@@ -7,7 +7,7 @@ const vm = require('node:vm');
 const { createRequire } = require('node:module');
 const { backendOrigin, configuration, requestJson, run, IngestionError } = require('../../.github/scripts/ingest.cjs');
 const env = { BACKEND_URL:'https://example.test/', INGEST_SECRET:'dummy-test-token' };
-const complete = overrides => ({ status:'completed',sourcesTotal:3,attempted:3,succeeded:3,failed:0,skipped:0,articlesAdded:2,completedAt:'2026-09-15T16:00:00Z',...overrides });
+const complete = overrides => ({ status:'completed',pipelineCompleted:true,pipelineFailures:0,failedSources:[],sourcesTotal:3,attempted:3,succeeded:3,failed:0,skipped:0,articlesAdded:2,completedAt:'2026-09-15T16:00:00Z',...overrides });
 const health = {status:200,json:{sources:{enabled:3}}};
 
 test('URL construction accepts origins and normalizes one trailing slash', () => {
@@ -57,7 +57,7 @@ test('authentication, non-2xx, timeout and network POST failures never retry pro
         assert.equal(posts,1);
     }
 });
-test('HTTP 200 alone, malformed counts, partial failures and zero sources cannot report success', async () => {
+test('HTTP 200 alone, malformed or unclassified failures and zero sources cannot report success', async () => {
     for(const result of [undefined,complete({attempted:99}),complete({failed:1,succeeded:2,status:'partial'}),complete({sourcesTotal:0,attempted:0,succeeded:0})]){
         await assert.rejects(run(env,{request:async(url,options)=>options.method==='POST'?{status:200,json:{status:'ingest started',result}}:health,log:()=>{}}));
     }
@@ -118,9 +118,9 @@ test('overlapping triggers share one promise and do not process twice', async()=
         release();const [one,two]=await Promise.all([a,b]);assert.equal(one,two);assert.equal(requests,3);
     }finally{fixture.db.close();}
 });
-test('all feed failures produce a failed summary and the next trigger can run again',async()=>{
+test('all feed failures produce a partial summary and the next trigger can run again',async()=>{
     const fixture=pipelineFixture({fetchFeed:async()=>{throw Error('HTTP 503');}});
-    try{for(let i=0;i<2;i++){const result=await fixture.runPipeline();assert.equal(result.status,'failed');assert.equal(result.failed,3);assert.equal(result.articlesAdded,0);}}finally{fixture.db.close();}
+    try{for(let i=0;i<2;i++){const result=await fixture.runPipeline();assert.equal(result.status,'partial');assert.equal(result.pipelineFailures,0);assert.equal(result.failedSources.length,3);assert.equal(result.failed,3);assert.equal(result.articlesAdded,0);}}finally{fixture.db.close();}
 });
 test('partial source failure retains the count of already committed articles',async()=>{
     let analyses=0;
@@ -156,4 +156,58 @@ test('authenticated ingestion route awaits completion, preserves legacy status, 
         fail=true;assert.equal((await fetch(url,{method:'POST',headers:{'x-ingest-secret':'dummy-route-secret'}})).status,500);
         delete runtime.env.INGEST_SECRET;assert.equal((await fetch(url,{method:'POST'})).status,500);
     }finally{release();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
+
+test('CMU timeout and several source failures are successful completed runs with warnings', async()=>{
+    for(const failed of [1,3]){
+        const logs=[];
+        const result=complete({sourcesTotal:32,attempted:failed,succeeded:0,failed,skipped:32-failed,articlesAdded:0,status:'partial',
+            failedSources:Array.from({length:failed},(_,i)=>({sourceName:i?'Fixture '+i:'ML@CMU',reason:'Fetch timeout'}))});
+        const actual=await run(env,{request:async(url,options)=>options.method==='POST'?{status:200,json:{result}}:health,log:line=>logs.push(line)});
+        assert.equal(actual,result);
+        assert.ok(logs.some(line=>line.startsWith('::warning::Ingestion completed with source warnings')));
+        assert.ok(logs.some(line=>line.includes('ML@CMU - Fetch timeout')));
+    }
+});
+test('pipeline failure and absent completion proof remain errors despite HTTP 200', async()=>{
+    for(const result of [
+        complete({pipelineCompleted:false}),
+        complete({pipelineCompleted:undefined}),
+        complete({status:'failed',failed:1,succeeded:2,pipelineFailures:1}),
+        complete({status:'completed',failed:1,succeeded:2,failedSources:[{sourceName:'CMU',reason:'Fetch timeout'}]}),
+    ])await assert.rejects(run(env,{request:async(url,options)=>options.method==='POST'?{status:200,json:{result}}:health,log:()=>{}}));
+});
+test('zero additions with successful fetched sources succeeds',async()=>{
+    const result=complete({articlesAdded:0});
+    assert.equal((await run(env,{request:async(url,options)=>options.method==='POST'?{status:200,json:{result}}:health,log:()=>{}})).articlesAdded,0);
+});
+test('warning output cannot echo an authentication secret or inject a new workflow command',async()=>{
+    const logs=[];
+    const result=complete({status:'partial',failed:1,succeeded:2,failedSources:[{sourceName:env.INGEST_SECRET+'\n::error::fake',reason:'Fetch timeout'}]});
+    await run(env,{request:async(url,options)=>options.method==='POST'?{status:200,json:{result}}:health,log:line=>logs.push(line)});
+    assert.ok(!logs.join('').includes(env.INGEST_SECRET));
+    assert.ok(logs.every(line=>!line.includes('\n')));
+});
+test('processing and database exceptions are classified as pipeline failures',async()=>{
+    const fixture=pipelineFixture({processArticle:async()=>{throw Error('processing/database failure');}});
+    try {
+        const result=await fixture.runPipeline();
+        assert.equal(result.status,'failed');assert.equal(result.pipelineFailures,3);assert.equal(result.failedSources.length,0);
+        await assert.rejects(run(env,{request:async(url,options)=>options.method==='POST'?{status:200,json:{result}}:health,log:()=>{}}),/pipeline\/database/);
+    } finally {fixture.db.close();}
+});
+
+test('database write failures cannot be downgraded to feed warnings',async()=>{
+    const fixture=pipelineFixture();
+    const prepare=fixture.db.prepare.bind(fixture.db);
+    fixture.db.prepare=sql=>{
+        if(sql.startsWith('INSERT INTO articles'))throw Error('database write failed');
+        return prepare(sql);
+    };
+    try {
+        const result=await fixture.runPipeline();
+        assert.equal(result.pipelineFailures,3);assert.equal(result.status,'failed');
+        assert.equal(result.failedSources.length,0);
+        await assert.rejects(run(env,{request:async(url,options)=>options.method==='POST'?{status:200,json:{result}}:health,log:()=>{}}),/pipeline\/database/);
+    } finally {fixture.db.close();}
 });

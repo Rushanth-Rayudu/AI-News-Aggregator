@@ -68,7 +68,7 @@ test('Postgres timestamp parser is UTC across host timezones and scoped to the p
     const {utcTypes}=require('../database/postgresAdapter');
     assert.equal(utcTypes.getTypeParser(23,'text')('42'),42);
 });
-test('database-wide candidates are ranked before limit, with two queries; Latest remains publication-based', async () => {
+test('candidate pages and IN lists are bounded while late-arriving winners remain eligible', async () => {
     const Database=require('better-sqlite3'),fs=require('node:fs'),path=require('node:path');
     const db=new Database(':memory:');
     try {
@@ -79,12 +79,24 @@ test('database-wide candidates are ranked before limit, with two queries; Latest
             db.prepare('INSERT INTO articles(eventId,sourceId,title,url,fingerprint,publishedAt) VALUES(?,?,?,?,?,?)').run(id,source,'OpenAI event','https://test/'+id,String(id),at(hours));
             return id;
         };
-        for(let i=0;i<305;i++)add(96,98);
+        for(let i=0;i<1005;i++)add(96,98);
         const fresh=add(2,80);
-        let queries=0;
-        const counted={prepare(sql){queries++;return db.prepare(sql);}};
+        let queries=0, largestPage=0, largestInList=0;
+        const counted={prepare(sql){
+            queries++;
+            const statement=db.prepare(sql);
+            return { get:(...args)=>statement.get(...args), all:(...args)=>{
+                const rows=statement.all(...args);
+                if(sql.includes('SELECT e.*')) {
+                    largestPage=Math.max(largestPage,rows.length);
+                    assert.match(sql,/ORDER BY e.id ASC LIMIT/);
+                }
+                if(sql.includes('IN ('))largestInList=Math.max(largestInList,args.length);
+                return rows;
+            }};
+        }};
         const top=await loadTopEvents(counted,NOW);
-        assert.equal(queries,2);assert.equal(top[0].id,fresh);assert.equal(top.length,4);
+        assert.equal(queries,13);assert.ok(largestPage<=200);assert.ok(largestInList<=200);assert.equal(top[0].id,fresh);assert.equal(top.length,4);assert.deepEqual(top.map(e=>e.id),[fresh,fresh-1,fresh-2,fresh-3]);
         const {eventQuery}=require('../services/searchService');
         const q=eventQuery({sort:'latest',limit:4});
         assert.equal(db.prepare(q.query).all(...q.params)[0].id,fresh);

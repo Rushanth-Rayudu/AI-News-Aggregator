@@ -58,10 +58,19 @@ function requestJson(url, { method = 'GET', headers = {}, timeoutMs = 90000, con
 
 function validateCompletion(body) {
     const result = body?.result;
-    const keys = ['sourcesTotal', 'attempted', 'succeeded', 'failed', 'skipped', 'articlesAdded'];
+    const keys = ['sourcesTotal', 'attempted', 'succeeded', 'failed', 'skipped', 'articlesAdded', 'pipelineFailures'];
     if (!result || !keys.every(k => Number.isSafeInteger(result[k]) && result[k] >= 0) ||
         result.attempted + result.skipped !== result.sourcesTotal ||
         result.succeeded + result.failed !== result.attempted ||
+        result.pipelineCompleted !== true ||
+        result.pipelineFailures > result.failed ||
+        !Array.isArray(result.failedSources) ||
+        result.failedSources.length !== result.failed - result.pipelineFailures ||
+        !result.failedSources.every(source => source && typeof source.sourceName === 'string' && source.sourceName.length <= 200 &&
+            ['HTTP 429: rate limited','HTTP 403: access denied','HTTP 404: feed missing','Fetch timeout','No recent dated articles extracted','Feed fetch, parsing or processing failed'].includes(source.reason)) ||
+        result.status !== (result.pipelineFailures ? 'failed' : result.failed ? 'partial' : 'completed') ||
+        typeof result.completedAt !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}T/.test(result.completedAt) ||
         !Number.isFinite(Date.parse(result.completedAt)) ||
         !['completed', 'partial', 'failed'].includes(result.status)) {
         throw new IngestionError('Backend did not return a valid ingestion completion summary. Deploy the matching backend update; HTTP reachability alone is not ingestion success.');
@@ -98,7 +107,16 @@ async function run(env = process.env, { request = requestJson, wait = sleep, log
     log('Ingestion finished: ' + result.attempted + ' sources attempted, ' + result.succeeded + ' succeeded, ' +
         result.failed + ' failed, ' + result.skipped + ' not due; ' + result.articlesAdded + ' articles added.');
     if (!result.sourcesTotal) throw new IngestionError('No enabled sources were available for ingestion.');
-    if (result.failed || result.status !== 'completed') throw new IngestionError('Ingestion finished with source failures. Some articles may have been saved; inspect source health and Render logs.');
+    if (result.pipelineFailures || result.status === 'failed') throw new IngestionError('Ingestion completed with pipeline/database failures. Inspect Render logs.');
+    if (result.failed) {
+        log('::warning::Ingestion completed with source warnings: ' + result.attempted + ' attempted, ' +
+            result.succeeded + ' succeeded, ' + result.failed + ' failed, ' + result.skipped + ' not due, ' + result.articlesAdded + ' articles added.');
+        for (const source of result.failedSources) {
+            // Escape workflow-command syntax and redact even an echoed credential.
+            const name = source.sourceName.split(secret).join('[redacted]').replace(/[%\r\n]/g, c => ({'%':'%25','\r':'%0D','\n':'%0A'}[c]));
+            log('::warning::Failed source: ' + name + ' - ' + source.reason);
+        }
+    }
     return result;
 }
 if (require.main === module) run().catch(error => {

@@ -47,7 +47,7 @@ export default function TopEvents({ events, onSelect, loading, error, onRetry, i
             <span className="m-label m-sub">Priority developments · {events.some(event => event.freshnessBucket !== '24h') ? 'Recent coverage' : 'Last 24 hours'}</span>
           </div>
           <div className="band-aside">
-            <span className="m-label">{events.length} tracked</span>
+            <span className="m-label">{events.length} shown</span>
           </div>
         </header>
       </Reveal>

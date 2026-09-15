@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchTopEvents, fetchEvents, fetchStatus, fetchThemes, fetchEventsSince, fetchSources } from '../utils/api';
 import { getWatchlist, saveWatchlist, getLastVisit, saveLastVisit } from '../utils/storage';
 import { parseTimestamp } from '../utils/timeUtils';
@@ -128,13 +128,6 @@ export default function Dashboard({ theme, onThemeChange }) {
   useEffect(() => {
     saveWatchlist(watchlist);
   }, [watchlist]);
-  const lastUpdated = useMemo(() => {
-    const times = events
-      .map(evt => parseTimestamp(evt.updatedAt || evt.discoveredAt))
-      .filter(date => !Number.isNaN(date.getTime()));
-    if (!times.length) return null;
-    return new Date(Math.max(...times.map(date => date.getTime()))).toISOString();
-  }, [events]);
 
   // Initial status + themes
   useEffect(() => {
@@ -387,7 +380,7 @@ export default function Dashboard({ theme, onThemeChange }) {
 
       <main className="mw">
         {(dossierLoading || dossierError) && <div className="alert" role={dossierError ? 'alert' : 'status'}><p>{dossierError || 'Loading event dossier...'}</p><button className="btn" onClick={closeEvent}>Return to feed</button></div>}
-        <SituationBand status={status} storyCount={filteredEvents.length} lastUpdated={lastUpdated} />
+        <SituationBand status={status} storyCount={filteredEvents.length} />
 
         {visitInfo && visitInfo.count > 0 && (
           <AnalystBrief info={visitInfo} onOpen={openEvent} onDismiss={markVisitSeen} />

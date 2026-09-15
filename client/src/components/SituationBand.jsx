@@ -1,19 +1,17 @@
-import { formatDistanceToNow, parseTimestamp } from '../utils/timeUtils';
+import { formatDistanceToNow } from '../utils/timeUtils';
 
 /**
  * Opening view — a live context band, not a marketing hero.
  * Everything shown comes from real status/feed data.
  */
-export default function SituationBand({ status, storyCount, lastUpdated }) {
+export default function SituationBand({ status, storyCount }) {
   const totalSources = status?.sources?.enabled ?? null;
 
-  let freshnessPct = 8;
-  if (lastUpdated) {
-    const ageHours = (Date.now() - parseTimestamp(lastUpdated).getTime()) / 3600000;
-    if (Number.isFinite(ageHours)) {
-      freshnessPct = Math.max(4, Math.min(100, Math.round(100 - (ageHours / 24) * 100)));
-    }
-  }
+  const ingestion = status?.ingestion;
+  const freshness = ingestion?.sourceFetchStatus;
+  const freshnessLabel = freshness === 'current' ? 'Current' : freshness === 'stale' ? 'Overdue' : 'Unknown';
+  // A categorical indicator of the backend status, not another age calculation.
+  const freshnessPct = freshness === 'current' ? 100 : freshness === 'stale' ? 8 : 0;
 
   return (
     <section className="sit" aria-label="Live intelligence context">
@@ -36,8 +34,8 @@ export default function SituationBand({ status, storyCount, lastUpdated }) {
           <b>{totalSources !== null ? `${totalSources} active` : 'Connecting…'}</b>
         </div>
         <div className="read-row">
-          <span className="rl">Signal freshness</span>
-          <b className="acc">{lastUpdated ? formatDistanceToNow(lastUpdated) : 'Checking…'}</b>
+          <span className="rl">Source freshness</span>
+          <b className="acc">{freshnessLabel}</b>
         </div>
         <div className="fresh" role="presentation">
           <i style={{ width: `${freshnessPct}%` }} />
@@ -47,8 +45,8 @@ export default function SituationBand({ status, storyCount, lastUpdated }) {
           <b>{storyCount}</b>
         </div>
         <div className="read-row">
-          <span className="rl">Analysis engine</span>
-          <b>{status ? (status.geminiConfigured ? 'Configured' : 'Not configured') : '…'}</b>
+          <span className="rl">Last source fetch</span>
+          <b>{ingestion?.lastSuccessfulSourceFetchAt ? formatDistanceToNow(ingestion.lastSuccessfulSourceFetchAt) : 'Unknown'}</b>
         </div>
       </div>
     </section>
