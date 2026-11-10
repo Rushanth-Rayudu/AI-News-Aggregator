@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import './index.css'
 import Dashboard from './components/Dashboard'
 import NotFound from './components/NotFound'
@@ -129,6 +130,7 @@ function App() {
       )}
       {sysBoot && <div className="sys-boot" aria-hidden="true" />}
       <Cursor />
+      <Analytics />
     </>
   )
 }
