@@ -5,6 +5,7 @@ import NotFound from './components/NotFound'
 import Landing from './pages/Landing'
 import Cursor from './components/Cursor'
 import { usePath, navigate, ROUTES } from './utils/router'
+import { Analytics } from '@vercel/analytics/react'
 
 const THEME_VALUES = ['sys', 'light', 'dark']
 const THEME_COLORS = { sys: '#000000', light: '#f4f3ee', dark: '#0b0e13' }
@@ -129,6 +130,7 @@ function App() {
       )}
       {sysBoot && <div className="sys-boot" aria-hidden="true" />}
       <Cursor />
+      <Analytics />
     </>
   )
 }
