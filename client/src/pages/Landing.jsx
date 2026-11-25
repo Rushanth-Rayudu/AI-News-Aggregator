@@ -568,7 +568,7 @@ function LandingFooter() {
         <span className="product-name">AI News Aggregator</span>
         <span className="m-label">The AI world, without the noise</span>
         <span className="grow" aria-hidden="true" />
-        <span>V.RUSHANTH RAYUDU</span>
+        <span>V.Rushanth Rayudu,D.Karthikeya,M.parvathi</span>
         <a href="https://github.com/Rushanth-Rayudu" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
       </div>
     </footer>
