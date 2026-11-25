@@ -98,6 +98,34 @@ export default function Dashboard({ theme, onThemeChange }) {
   const [visitInfo, setVisitInfo] = useState(null);
   const [watchlist, setWatchlist] = useState(() => getWatchlist());
 
+  const feedRef = useRef(null);
+  const sourcesRef = useRef(null);
+  const pendingCategoryScroll = useRef(false);
+  const [feedScrollVersion, setFeedScrollVersion] = useState(0);
+
+  function scrollToSection(ref) {
+    ref.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    });
+  }
+
+  function navigateCategory(category) {
+    if (filters.category === category) {
+      if (loading) pendingCategoryScroll.current = true;
+      else setFeedScrollVersion(value => value + 1);
+      return;
+    }
+    pendingCategoryScroll.current = true;
+    setFilters(prev => ({ ...prev, category }));
+  }
+
+  useEffect(() => {
+    if (!feedScrollVersion || loading || featuredLoading || themesLoading) return undefined;
+    const frame = window.requestAnimationFrame(() => scrollToSection(feedRef));
+    return () => window.cancelAnimationFrame(frame);
+  }, [feedScrollVersion, loading, featuredLoading, themesLoading]);
+
   const eventsRef = useRef(events);
   useEffect(() => {
     eventsRef.current = events;
@@ -203,7 +231,13 @@ export default function Dashboard({ theme, onThemeChange }) {
     } catch {
       if(version === requestVersion.current) setError('Unable to load records. Please retry.');
     } finally {
-      if (!append && version === requestVersion.current) setLoading(false);
+      if (!append && version === requestVersion.current) {
+        setLoading(false);
+        if (pendingCategoryScroll.current) {
+          pendingCategoryScroll.current = false;
+          setFeedScrollVersion(value => value + 1);
+        }
+      }
     }
   }
 
@@ -367,7 +401,8 @@ export default function Dashboard({ theme, onThemeChange }) {
     <div>
       <TopNav
         activeCategory={filters.category}
-        onNavigate={category => setFilters(prev => ({ ...prev, category }))}
+        onNavigate={navigateCategory}
+        onShowSources={() => scrollToSection(sourcesRef)}
         onRefresh={handleRefresh}
         refreshing={refreshing}
         status={status}
@@ -400,7 +435,7 @@ export default function Dashboard({ theme, onThemeChange }) {
 
         <MomentumBoard themes={themes} activeCategory={filters.category} onSelectTheme={selectTheme} loading={themesLoading} error={themesError} onRetry={loadThemes} />
 
-        <section className="band" id="feed" aria-label="Intelligence feed">
+        <section className="band" id="feed" ref={feedRef} aria-label="Intelligence feed">
           <Reveal>
             <header className="band-head">
               <span className="band-no">03</span>
@@ -480,7 +515,7 @@ export default function Dashboard({ theme, onThemeChange }) {
           </Reveal>
         </section>
 
-        <SystemStatus status={status} statusError={statusError} sources={sources} sourcesError={sourcesError} onRetrySources={loadSources} refreshing={refreshing} onRefresh={handleRefresh} />
+        <SystemStatus sectionRef={sourcesRef} status={status} statusError={statusError} sources={sources} sourcesError={sourcesError} onRetrySources={loadSources} refreshing={refreshing} onRefresh={handleRefresh} />
       </main>
 
 

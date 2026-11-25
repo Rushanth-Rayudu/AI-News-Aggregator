@@ -15,8 +15,9 @@ const THEME_OPTIONS = [
   { value: 'dark', label: 'Dark' },
 ];
 
-export default function TopNav({ activeCategory, onNavigate, onRefresh, refreshing, status, themePreference, onThemeChange }) {
+export default function TopNav({ activeCategory, onNavigate, onShowSources, onRefresh, refreshing, status, themePreference, onThemeChange }) {
   const sourceCount = status?.sources?.enabled ?? '—';
+  const healthyCount = status?.sources?.healthy ?? '—';
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -31,6 +32,15 @@ export default function TopNav({ activeCategory, onNavigate, onRefresh, refreshi
   function goCategory(category) {
     onNavigate(category);
     setMenuOpen(false);
+  }
+
+  function goSources() {
+    if (menuOpen) {
+      setMenuOpen(false);
+      window.requestAnimationFrame(onShowSources);
+      return;
+    }
+    onShowSources();
   }
 
   return (
@@ -64,10 +74,17 @@ export default function TopNav({ activeCategory, onNavigate, onRefresh, refreshi
         </nav>
 
         <div className="nav-side">
-          <span className="live">
+          <button
+            type="button"
+            className="live live-button"
+            onClick={goSources}
+            aria-label={`${sourceCount} active and ${healthyCount} healthy sources. Scroll to Live News Sources`}
+            title="View live news sources"
+          >
             <span className="dot dot-live" aria-hidden="true" />
-            <span className="live-word"><b>{sourceCount}</b> active · {status?.sources?.healthy ?? '—'} healthy</span>
-          </span>
+            <span className="live-word"><b>{sourceCount}</b> active · <b>{healthyCount}</b> healthy</span>
+            <span className="live-compact" aria-hidden="true"><b>{sourceCount}</b>A · <b>{healthyCount}</b>H</span>
+          </button>
 
           <fieldset id="color-scheme" className="theme-seg" aria-label="Display theme">
             <legend className="sr-only">Display theme</legend>
@@ -79,8 +96,12 @@ export default function TopNav({ activeCategory, onNavigate, onRefresh, refreshi
                   value={option.value}
                   checked={themePreference === option.value}
                   onChange={e => onThemeChange(e.target.value)}
+                  aria-label={option.label}
                 />
-                {option.label}
+                <span className="theme-label-full">{option.label}</span>
+                <span className="theme-label-short" aria-hidden="true">
+                  {option.value === 'sys' ? 'T' : option.value === 'light' ? 'L' : 'D'}
+                </span>
               </label>
             ))}
           </fieldset>
@@ -117,6 +138,7 @@ export default function TopNav({ activeCategory, onNavigate, onRefresh, refreshi
               key={item.label}
               type="button"
               className={`nav-link${activeCategory === item.category ? ' on' : ''}`}
+              aria-current={activeCategory === item.category ? 'true' : undefined}
               onClick={() => goCategory(item.category)}
             >
               <span>{item.label}</span>
